@@ -1,0 +1,328 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables ─────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --color-bg:             #D9EA63;
+    --color-surface:        #FFFFFF;
+    --color-surface-muted:  #F6F6F2;
+    --color-surface-soft:   #F2F2EF;
+    --color-card:           #FFFFFF;
+    --color-card-hover:     #F6F6F2;
+    --color-border:         #E7E6E0;
+    --color-border-strong:  #D0CFC8;
+    --color-txt-primary:    #111111;
+    --color-txt-secondary:  #6A6A66;
+    --color-txt-muted:      #9A9A94;
+    --color-accent-lime:    #DCEB63;
+    --color-accent-lime-h:  #CFE14A;
+    --color-accent-purple:       #8B5CF6;
+    --color-accent-purple-soft:  #EEE7FF;
+    --shadow-card:          0 8px 24px rgba(32, 32, 24, 0.06);
+    --shadow-card-hover:    0 12px 28px rgba(32, 32, 24, 0.09);
+    --toggle-inactive:      #E4E3DE;
+    --toggle-active:        #A675FF;
+    --scrollbar-thumb:            var(--color-border-strong);
+    --scrollbar-thumb-hover:      color-mix(in srgb, var(--color-accent-purple) 45%, var(--color-border-strong));
+    /* Botões “perigo” — light: blush + texto escuro */
+    --color-danger-soft:          #FFD8D8;
+    --color-danger-fg:            #292524;
+    --color-danger-border:        color-mix(in srgb, #dc2626 28%, #e7bfb8);
+    --color-success-soft:         #D8F3C8;
+    --color-success-border:       rgba(17, 17, 17, 0.06);
+  }
+
+  .dark {
+    --color-bg:             #0F0F0E;
+    --color-surface:        #1A1A18;
+    --color-surface-muted:  #252523;
+    --color-surface-soft:   #1F1F1D;
+    --color-card:           #1F1F1D;
+    --color-card-hover:     #252523;
+    --color-border:         #2E2E2B;
+    --color-border-strong:  #3A3A37;
+    --color-txt-primary:    #F0EFE8;
+    --color-txt-secondary:  #9A9A94;
+    --color-txt-muted:      #5A5A56;
+    --color-accent-lime:    #D4E44E;
+    --color-accent-lime-h:  #C8D840;
+    --color-accent-purple:       #A67FFB;
+    /* Fundo escuro com tint roxo — texto primário no dark continua legível */
+    --color-accent-purple-soft:  color-mix(in srgb, var(--color-accent-purple) 22%, var(--color-surface-muted));
+    --shadow-card:          0 8px 24px rgba(0, 0, 0, 0.32);
+    --shadow-card-hover:    0 12px 28px rgba(0, 0, 0, 0.44);
+    --toggle-inactive:      #3A3A37;
+    --toggle-active:        #A675FF;
+    --scrollbar-thumb:            color-mix(in srgb, var(--color-border-strong) 65%, var(--color-txt-muted));
+    --scrollbar-thumb-hover:      color-mix(in srgb, var(--color-accent-purple) 42%, var(--color-border-strong));
+    /* Vermelho contido sobre superfície escura — evita blush pastel do light */
+    --color-danger-soft:          color-mix(in srgb, #f87171 20%, var(--color-surface-muted));
+    --color-danger-fg:            #fecaca;
+    --color-danger-border:        color-mix(in srgb, #f87171 42%, var(--color-border-strong));
+    --color-success-soft:         color-mix(in srgb, #86efac 18%, var(--color-surface-muted));
+    --color-success-border:       color-mix(in srgb, #86efac 30%, var(--color-border-strong));
+  }
+
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-txt-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Keep native date picker icon visible in dark inputs */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.9) brightness(1.2);
+    opacity: 0.9;
+  }
+}
+
+/* ─── Component Recipes ─────────────────────────────────────────── */
+@layer components {
+
+  /* Card */
+  .card {
+    background-color: var(--color-card);
+    border-radius: 24px;
+    box-shadow: var(--shadow-card);
+    padding: 24px;
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Chip */
+  .chip {
+    @apply inline-flex items-center px-3 py-1.5 rounded-chip text-label;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    color: var(--color-txt-secondary);
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-control font-medium text-body-strong transition-colors;
+    background-color: var(--color-accent-lime);
+    color: #111111;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-accent-lime-h);
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-control font-medium text-body-strong transition-colors;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    color: var(--color-txt-primary);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-surface-muted);
+  }
+
+  /* Eliminar / destrutivo — cores vêm das variáveis de tema */
+  .btn-delete-soft {
+    @apply inline-flex items-center justify-center rounded-control border px-4 py-2.5 text-body font-medium transition-[opacity,background-color,color] duration-200;
+    background-color: var(--color-danger-soft);
+    border-color: var(--color-danger-border);
+    color: var(--color-danger-fg);
+  }
+  .btn-delete-soft:hover:not(:disabled) {
+    opacity: 0.94;
+  }
+  .dark .btn-delete-soft:hover:not(:disabled) {
+    opacity: 1;
+    background-color: color-mix(in srgb, #f87171 28%, var(--color-surface-muted));
+  }
+
+  .btn-delete-soft-icon {
+    @apply btn-delete-soft border p-0 h-6 w-6 shrink-0 rounded-full text-caption font-semibold leading-none tracking-tight shadow-sm;
+    line-height: 1 !important;
+  }
+  .dark .btn-delete-soft-icon:hover:not(:disabled) {
+    background-color: color-mix(in srgb, #f87171 30%, var(--color-surface-muted));
+  }
+
+  /* Icon button */
+  .icon-btn {
+    @apply flex items-center justify-center w-9 h-9 rounded-xl transition-colors;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    color: var(--color-txt-primary);
+  }
+  .icon-btn:hover {
+    background-color: var(--color-surface-muted);
+  }
+
+  /**
+   * Inputs / selects alinhados ao tema — evita fundo transparente no dark
+   * (texto claro sobre dropdown nativo ilegível).
+   */
+  .form-control-themed {
+    @apply rounded-control px-3 py-2 text-body transition-[border-color,box-shadow] duration-150;
+    background-color: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    color: var(--color-txt-primary);
+  }
+  .form-control-themed:focus {
+    outline: none;
+    border-color: var(--color-border-strong);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-purple) 28%, transparent);
+  }
+  .form-control-themed::placeholder {
+    color: var(--color-txt-muted);
+  }
+  .form-control-themed option {
+    background-color: var(--color-card);
+    color: var(--color-txt-primary);
+  }
+
+  /** Native multi-select lists (People / Projects filters): match spacing; focus uses .form-control-themed:focus */
+  select.form-control-themed[multiple] {
+    cursor: default;
+    line-height: 1.4;
+  }
+
+  /* Remove spinners feios do Firefox nos inputs tipo número */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Metric ring wrapper */
+  .metric-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  /* Sidebar nav item — base */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-body-strong w-full text-left transition-colors cursor-pointer;
+    color: var(--color-txt-secondary);
+  }
+  .nav-item:hover {
+    background-color: var(--color-surface-muted);
+    color: var(--color-txt-primary);
+  }
+  .nav-item.active {
+    background-color: var(--color-accent-lime);
+    color: #111111;
+    font-weight: 600;
+  }
+  /* Indented child under Settings */
+  .nav-subitem {
+    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-body w-full text-left transition-colors cursor-pointer ml-2 pl-5 border-l-2;
+    border-color: transparent;
+    color: var(--color-txt-secondary);
+  }
+  .nav-subitem:hover {
+    background-color: var(--color-surface-muted);
+    color: var(--color-txt-primary);
+  }
+  .nav-subitem.active {
+    border-color: var(--color-accent-lime);
+    background-color: var(--color-surface-muted);
+    color: var(--color-txt-primary);
+    font-weight: 600;
+  }
+
+  /* Stat tile */
+  .stat-tile {
+    @apply p-4 rounded-2xl;
+    background-color: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+  }
+
+  /*
+   * Scrollbar fino alinhado ao tema (Firefox + Chromium/WebKit).
+   * Sem setas / trilho brutal — só o thumb arredondado.
+   */
+  .scrollbar-themed {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .scrollbar-themed::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  .scrollbar-themed::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-themed::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-themed::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  .scrollbar-themed::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* ─── Rich Text Editor (TipTap) ─────────────────────────────────── */
+  .rte-content .ProseMirror {
+    min-height: 120px;
+    padding: 0.625rem 0.75rem;
+    outline: none;
+    color: var(--color-txt-primary);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .rte-content .ProseMirror p { margin: 0.2rem 0; }
+  .rte-content .ProseMirror p:first-child { margin-top: 0; }
+  .rte-content .ProseMirror p:last-child  { margin-bottom: 0; }
+  .rte-content .ProseMirror ul,
+  .rte-content .ProseMirror ol {
+    padding-left: 1.25rem;
+    margin: 0.4rem 0;
+  }
+  .rte-content .ProseMirror li + li { margin-top: 0.2rem; }
+  .rte-content .ProseMirror h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.25rem;
+    color: var(--color-txt-primary);
+  }
+  .rte-content .ProseMirror strong { font-weight: 600; }
+  .rte-content .ProseMirror em     { font-style: italic; }
+  .rte-content .ProseMirror s      { text-decoration: line-through; }
+  .rte-content .ProseMirror hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 0.75rem 0;
+  }
+  .rte-content .ProseMirror code {
+    background: var(--color-surface-muted);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.8125rem;
+  }
+  .rte-content .ProseMirror pre {
+    background: var(--color-surface-muted);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    margin: 0.5rem 0;
+    overflow-x: auto;
+  }
+  .rte-content .ProseMirror pre code {
+    background: none;
+    padding: 0;
+  }
+}

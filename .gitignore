@@ -1,0 +1,41 @@
+# ========================
+# Laravel (api/)
+# ========================
+.env
+.env.*
+!.env.example
+!.env.render.example
+api/vendor/
+api/node_modules/
+api/.env
+api/storage/logs/*.log
+api/coverage*.txt
+api/phpdbg*.txt
+api/build/
+api/public/hot
+api/storage/framework/views/*.php
+api/storage/framework/cache/data/*
+api/storage/logs/*.log
+api/bootstrap/cache/*.php
+
+# ========================
+# React (web/)
+# ========================
+web/node_modules/
+web/dist/
+
+docs/screenshots/.auth/
+
+# ========================
+# IDE
+# ========================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
