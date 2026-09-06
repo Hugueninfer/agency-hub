@@ -7,6 +7,7 @@ use App\Domain\Repositories\InvoiceRepository;
 use App\Events\InvoiceStatusChangedEvent;
 use App\Mail\InvoiceSentMail;
 use App\Models\Invoice;
+use App\Models\Tenant;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection;
@@ -160,6 +161,11 @@ class InvoiceService
 
     public function sendInvoice(string $invoiceUuid, int $tenantId, ?int $userId, ?string $ccEmail): Invoice
     {
+        $actor = $userId !== null ? User::find($userId) : null;
+        if ($actor?->isDemo() || Tenant::query()->whereKey($tenantId)->where('kind', 'demo')->exists()) {
+            abort(403, 'External actions are disabled in demonstrations.');
+        }
+
         $invoice = $this->getInvoiceByUuid($invoiceUuid, $tenantId);
         $invoice->load('items');
 

@@ -3,7 +3,13 @@
 namespace Tests\Feature\Api;
 
 use App\Domain\Services\DemoSessionService;
+use App\Events\InvoiceStatusChangedEvent;
+use App\Jobs\ProcessFathomMeetingJob;
+use App\Listeners\NotificationDispatcher;
+use App\Mail\InvoiceSentMail;
 use App\Models\DemoToken;
+use App\Models\FathomIntegration;
+use App\Models\Invoice;
 use App\Models\MenuItem;
 use App\Models\Notification;
 use App\Models\Project;
@@ -11,7 +17,10 @@ use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class DemoSafetyTest extends TestCase
@@ -184,5 +193,87 @@ class DemoSafetyTest extends TestCase
         $this->postJson('/api/v1/rbac/roles/'.$role->uuid.'/permissions', ['permission_codes' => ['project.read']])->assertSuccessful();
         $this->assertSame(1, $role->permissions()->count());
         $this->assertSame(2, $this->tenant->fresh()->demo_write_count);
+    }
+
+    public function test_demo_users_cannot_send_invoices_or_queue_mail(): void
+    {
+        Mail::fake();
+        $invoice = Invoice::where('tenant_id', $this->tenant->id)
+            ->where('status', Invoice::STATUS_DRAFT)
+            ->sole();
+
+        $this->postJson('/api/v1/invoices/'.$invoice->uuid.'/send')
+            ->assertForbidden();
+
+        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
+    }
+
+    public function test_demo_fathom_webhooks_are_rejected_without_queueing_a_job(): void
+    {
+        Queue::fake();
+        $project = $this->tenant->projects()->firstOrFail();
+        $integration = FathomIntegration::create([
+            'tenant_id' => $this->tenant->id,
+            'token' => 'demo-fathom-token',
+            'webhook_secret' => 'demo-fathom-secret',
+            'default_project_uuid' => $project->uuid,
+            'default_board_column' => Task::BOARD_TODO,
+        ]);
+        $payload = [
+            'event' => 'call.completed',
+            'data' => ['id' => 'demo-meeting-1', 'action_items' => ['Do not create this task']],
+        ];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        $this->postJson('/api/v1/webhooks/fathom/'.$integration->token, $payload, [
+            'X-Fathom-Signature' => 'sha256='.hash_hmac('sha256', $body, $integration->webhook_secret),
+        ])->assertForbidden();
+
+        Queue::assertNotPushed(ProcessFathomMeetingJob::class);
+    }
+
+    public function test_personal_users_can_still_queue_invoice_delivery(): void
+    {
+        Mail::fake();
+        $this->tenant->update(['kind' => 'personal']);
+        $user = DemoToken::where('tenant_id', $this->tenant->id)->sole()->user;
+        $invoice = Invoice::where('tenant_id', $this->tenant->id)
+            ->where('status', Invoice::STATUS_DRAFT)
+            ->sole();
+        $this->withoutToken();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/invoices/'.$invoice->uuid.'/send')
+            ->assertOk();
+
+        Mail::assertQueued(InvoiceSentMail::class);
+    }
+
+    public function test_demo_notifications_do_not_write_or_queue_email_after_the_request(): void
+    {
+        Mail::fake();
+        $actor = DemoToken::where('tenant_id', $this->tenant->id)->sole()->user;
+        $recipient = $this->tenant->users()->whereKeyNot($actor->id)->firstOrFail();
+        $invoice = Invoice::where('tenant_id', $this->tenant->id)
+            ->where('status', Invoice::STATUS_DRAFT)
+            ->sole();
+
+        app(NotificationDispatcher::class)->handle(new InvoiceStatusChangedEvent(
+            invoice: $invoice,
+            oldStatus: Invoice::STATUS_DRAFT,
+            newStatus: Invoice::STATUS_SENT,
+            recipient: $recipient,
+            actor: $actor,
+            tenantId: $this->tenant->id,
+        ));
+
+        $this->assertDatabaseMissing('notifications', [
+            'tenant_id' => $this->tenant->id,
+            'notifiable_id' => $recipient->id,
+            'title' => 'Invoice '.$invoice->invoice_number.' status changed to sent',
+        ]);
+        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Domain\Services\TaskService;
 use App\Models\FathomProcessedEvent;
 use App\Models\Task;
+use App\Models\Tenant;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -28,6 +29,12 @@ class ProcessFathomMeetingJob implements ShouldQueue
 
     public function handle(TaskService $taskService): void
     {
+        if (Tenant::query()->whereKey($this->tenantId)->where('kind', 'demo')->exists()) {
+            Log::warning('ProcessFathomMeetingJob: demo tenant skipped', ['tenant_id' => $this->tenantId]);
+
+            return;
+        }
+
         $meetingId = $this->meetingData['id'] ?? null;
 
         if ($meetingId === null) {
@@ -50,17 +57,17 @@ class ProcessFathomMeetingJob implements ShouldQueue
         }
 
         $meetingTitle = $this->meetingData['title'] ?? 'Reunião sem título';
-        $meetingDate  = isset($this->meetingData['started_at'])
+        $meetingDate = isset($this->meetingData['started_at'])
             ? substr($this->meetingData['started_at'], 0, 10)
             : now()->toDateString();
 
         $attendees = collect($this->meetingData['attendees'] ?? [])->pluck('name')->filter()->values()->all();
 
         $sourceMetadata = [
-            'meeting_id'    => $meetingId,
+            'meeting_id' => $meetingId,
             'meeting_title' => $meetingTitle,
-            'meeting_date'  => $meetingDate,
-            'attendees'     => $attendees,
+            'meeting_date' => $meetingDate,
+            'attendees' => $attendees,
         ];
 
         foreach ($actionItems as $item) {
@@ -72,10 +79,10 @@ class ProcessFathomMeetingJob implements ShouldQueue
 
             $taskService->createTask(
                 [
-                    'title'        => $text,
-                    'description'  => "Reunião: <strong>{$meetingTitle}</strong> · {$meetingDate}",
+                    'title' => $text,
+                    'description' => "Reunião: <strong>{$meetingTitle}</strong> · {$meetingDate}",
                     'board_column' => $this->boardColumn,
-                    'source'       => Task::SOURCE_FATHOM,
+                    'source' => Task::SOURCE_FATHOM,
                     'source_metadata' => $sourceMetadata,
                 ],
                 $this->projectUuid,
@@ -87,8 +94,8 @@ class ProcessFathomMeetingJob implements ShouldQueue
         FathomProcessedEvent::create(['meeting_id' => $meetingId, 'tenant_id' => $this->tenantId]);
 
         Log::info('ProcessFathomMeetingJob: tarefas criadas', [
-            'meeting_id'   => $meetingId,
-            'tenant_id'    => $this->tenantId,
+            'meeting_id' => $meetingId,
+            'tenant_id' => $this->tenantId,
             'tasks_created' => count($actionItems),
         ]);
     }

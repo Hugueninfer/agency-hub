@@ -11,6 +11,7 @@ use App\Http\Resources\V1\Invoice\InvoiceResource;
 use App\Support\Messages\ToastMessage;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -118,6 +119,8 @@ class InvoiceController extends Controller
             );
         } catch (NotFoundHttpException $exception) {
             return $this->buildErrorResponse($exception->getMessage(), Response::HTTP_NOT_FOUND);
+        } catch (HttpExceptionInterface $exception) {
+            return $this->buildErrorResponse($exception, $exception->getStatusCode());
         } catch (Throwable $exception) {
             return $this->buildErrorResponse($exception, Response::HTTP_UNPROCESSABLE_ENTITY);
         }

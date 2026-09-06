@@ -13,7 +13,7 @@ class FathomWebhookController extends Controller
 {
     public function handle(Request $request, string $token): JsonResponse
     {
-        $integration = FathomIntegration::where('token', $token)->first();
+        $integration = FathomIntegration::with('tenant')->where('token', $token)->first();
 
         if ($integration === null) {
             return response()->json(['error' => 'Not found.'], Response::HTTP_NOT_FOUND);
@@ -21,6 +21,12 @@ class FathomWebhookController extends Controller
 
         if (! $this->signatureIsValid($request, $integration->webhook_secret)) {
             return response()->json(['error' => 'Invalid signature.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($integration->tenant?->isDemo()) {
+            return response()->json([
+                'error' => 'External actions are disabled in demonstrations.',
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $payload = $request->json()->all();

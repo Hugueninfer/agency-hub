@@ -12,6 +12,7 @@ use App\Events\TaskCompletedEvent;
 use App\Events\TaskMentionEvent;
 use App\Events\TaskStatusChangedEvent;
 use App\Mail\NotificationMail;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Notifications\NotificationType;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,6 +33,10 @@ class NotificationDispatcher implements ShouldQueue
         |TaskStatusChangedEvent|TaskCompletedEvent
         |InvoiceStatusChangedEvent|ProjectUpdatedEvent $event,
     ): void {
+        if (Tenant::query()->whereKey($event->tenantId)->where('kind', 'demo')->exists()) {
+            return;
+        }
+
         $type = $this->resolveType($event);
         $recipient = $this->resolveRecipient($event);
         $actor = $this->resolveActor($event);
