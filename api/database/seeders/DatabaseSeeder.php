@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Tenant;
+use App\Models\MenuItem;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\Tenant;
 use App\Models\User;
-use App\Models\MenuItem;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -20,11 +20,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new \RuntimeException('DatabaseSeeder is disabled outside local/testing.');
+        }
+
         $tenant = Tenant::query()->firstOrCreate(
             ['email' => 'tenant@Formulax.local'],
             [
-                'uuid'   => (string) \Illuminate\Support\Str::uuid(),
-                'name'   => 'FormulaX Tenant',
+                'uuid' => (string) Str::uuid(),
+                'name' => 'FormulaX Tenant',
                 'status' => 'active',
             ],
         );
@@ -32,10 +36,10 @@ class DatabaseSeeder extends Seeder
         $user = User::query()->updateOrCreate([
             'email' => 'test@example.com',
         ], [
-            'uuid'      => (string) Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'tenant_id' => $tenant->id,
-            'name'      => 'Test User',
-            'password'  => 'password',
+            'name' => 'Test User',
+            'password' => 'password',
         ]);
 
         if (empty($user->uuid)) {
@@ -83,7 +87,7 @@ class DatabaseSeeder extends Seeder
             Permission::query()->updateOrCreate(
                 ['code' => $permission['code']],
                 [
-                    'name'        => $permission['name'],
+                    'name' => $permission['name'],
                     'description' => null,
                 ],
             );
@@ -92,10 +96,10 @@ class DatabaseSeeder extends Seeder
         $ownerRole = Role::query()->updateOrCreate(
             [
                 'tenant_id' => $tenant->id,
-                'name'      => 'owner',
+                'name' => 'owner',
             ],
             [
-                'uuid'        => (string) Str::uuid(),
+                'uuid' => (string) Str::uuid(),
                 'description' => 'Tenant owner role',
             ],
         );
@@ -103,10 +107,10 @@ class DatabaseSeeder extends Seeder
         $memberRole = Role::query()->updateOrCreate(
             [
                 'tenant_id' => $tenant->id,
-                'name'      => 'member',
+                'name' => 'member',
             ],
             [
-                'uuid'        => (string) Str::uuid(),
+                'uuid' => (string) Str::uuid(),
                 'description' => 'Limited workspace access (no RBAC)',
             ],
         );
@@ -143,10 +147,10 @@ class DatabaseSeeder extends Seeder
         $memberUser = User::query()->updateOrCreate(
             ['email' => 'member@example.com'],
             [
-                'uuid'      => (string) Str::uuid(),
+                'uuid' => (string) Str::uuid(),
                 'tenant_id' => $tenant->id,
-                'name'      => 'Member User',
-                'password'  => 'password',
+                'name' => 'Member User',
+                'password' => 'password',
             ],
         );
 
