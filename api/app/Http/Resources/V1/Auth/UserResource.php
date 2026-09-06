@@ -23,12 +23,13 @@ class UserResource extends JsonResource
             ->all();
 
         return [
-            'uuid'         => $this->uuid,
-            'tenant_id'    => $this->tenant_id,
-            'name'         => $this->name,
-            'email'        => $this->email,
-            'photo_url'    => $photoUrl,
-            'permissions'  => $permissionCodes,
+            'uuid' => $this->uuid,
+            'is_demo' => $this->resource->isDemo(),
+            'expires_at' => $this->tenant?->expires_at?->toIso8601String(),
+            'name' => $this->name,
+            'email' => $this->email,
+            'photo_url' => $photoUrl,
+            'permissions' => $permissionCodes,
         ];
     }
 }

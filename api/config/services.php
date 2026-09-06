@@ -2,6 +2,12 @@
 
 return [
 
+    'demo' => [
+        'ttl_hours' => max(1, min(48, (int) env('DEMO_TTL_HOURS', 24))),
+        'max_active' => max(0, (int) env('DEMO_MAX_ACTIVE', 100)),
+        'max_writes' => max(0, (int) env('DEMO_MAX_WRITES', 5000)),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\V1\AuthController;
 use App\Http\Controllers\V1\BoardController;
+use App\Http\Controllers\V1\ConfigController;
+use App\Http\Controllers\V1\DemoAuthController;
 use App\Http\Controllers\V1\FathomWebhookController;
 use App\Http\Controllers\V1\InvoiceController;
 use App\Http\Controllers\V1\MenuController;
@@ -22,6 +24,8 @@ Route::get('/health', function () {
 });
 
 Route::prefix('v1')->group(function () {
+    Route::get('/config', [ConfigController::class, 'show']);
+    Route::post('/auth/demo', [DemoAuthController::class, 'create'])->middleware('throttle:demo-create');
     // Public webhook — no Sanctum, authenticated by token in URL + HMAC signature
     Route::post('/webhooks/fathom/{token}', [FathomWebhookController::class, 'handle'])
         ->middleware('throttle:30,1');
@@ -29,7 +33,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:login');
 
-    Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+    Route::middleware(['workspace.auth', 'tenant'])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 

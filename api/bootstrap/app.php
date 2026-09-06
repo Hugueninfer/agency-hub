@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Middleware\AuthenticateWorkspace;
+use App\Http\Middleware\EnsureTenantContext;
+use App\Http\Middleware\EnsureUserHasPermission;
+use App\Http\Middleware\SecurityHeaders;
+use App\Support\Messages\ToastMessage;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
-use App\Support\Messages\ToastMessage;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,12 +24,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
 
         $middleware->alias([
-            'tenant'     => \App\Http\Middleware\EnsureTenantContext::class,
-            'permission' => \App\Http\Middleware\EnsureUserHasPermission::class,
+            'workspace.auth' => AuthenticateWorkspace::class,
+            'tenant' => EnsureTenantContext::class,
+            'permission' => EnsureUserHasPermission::class,
         ]);
 
         $middleware->appendToGroup('api', [
-            \App\Http\Middleware\SecurityHeaders::class,
+            SecurityHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
