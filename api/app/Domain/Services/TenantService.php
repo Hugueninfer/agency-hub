@@ -4,11 +4,32 @@ namespace App\Domain\Services;
 
 use App\Models\Tenant;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TenantService
 {
+    /**
+     * Delete a tenant through the lifecycle-safe path.
+     *
+     * Scheduled demo cleanup must call this method rather than performing a bulk
+     * tenant delete, so Sanctum's polymorphic personal access tokens are removed
+     * before the database cascades delete the tenant's users and domain graph.
+     */
+    public function deleteForLifecycle(Tenant $tenant): void
+    {
+        DB::transaction(function () use ($tenant): void {
+            $tenant->users()
+                ->lockForUpdate()
+                ->each(function ($user): void {
+                    $user->tokens()->delete();
+                });
+
+            $tenant->delete();
+        });
+    }
+
     public function getSettings(int $tenantId): Tenant
     {
         $tenant = Tenant::query()->find($tenantId);

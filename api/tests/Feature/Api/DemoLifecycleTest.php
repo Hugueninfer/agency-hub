@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Services\TenantService;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Tenant;
@@ -33,6 +34,12 @@ class DemoLifecycleTest extends TestCase
     public function test_deleting_a_demo_tenant_cascades_its_graph_without_deleting_personal_tenant(): void
     {
         $personal = $this->createTenant();
+        $personalUser = $this->createUser($personal);
+        $personalProject = Project::query()->create([
+            'tenant_id' => $personal->id,
+            'name' => 'Personal Project',
+        ]);
+        $personalAccessToken = $personalUser->createToken('personal lifecycle')->accessToken;
         $demo = $this->createTenant(['kind' => 'demo']);
         $demoUser = $this->createUser($demo);
         $demoRole = Role::query()->create([
@@ -48,15 +55,21 @@ class DemoLifecycleTest extends TestCase
             'user_id' => $demoUser->id,
             'expires_at' => now()->addHours(24),
         ]);
+        $demoAccessToken = $demoUser->createToken('demo lifecycle')->accessToken;
 
-        $demo->delete();
+        app(TenantService::class)->deleteForLifecycle($demo);
 
         $this->assertDatabaseHas('tenants', ['id' => $personal->id]);
+        $this->assertDatabaseHas('users', ['id' => $personalUser->id]);
+        $this->assertDatabaseHas('projects', ['id' => $personalProject->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $personalAccessToken->id]);
         $this->assertDatabaseMissing('tenants', ['id' => $demo->id]);
         $this->assertDatabaseMissing('users', ['id' => $demoUser->id]);
         $this->assertDatabaseMissing('roles', ['id' => $demoRole->id]);
         $this->assertDatabaseMissing('projects', ['id' => $demoProject->id]);
         $this->assertDatabaseMissing('demo_tokens', ['digest' => $demoToken->digest]);
+        $this->assertArrayNotHasKey('digest', $demoToken->toArray());
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $demoAccessToken->id]);
     }
 
     /**
