@@ -86,3 +86,12 @@ export function clearDemoSession() {
 export function hasDemoIntent() {
   return loadDemoSession() !== null;
 }
+
+/** Check before loading so expired intent cannot fall back to a personal cookie. */
+export function hasStoredDemoSession() {
+  try {
+    return getSessionStorage()?.getItem(STORAGE_KEY) != null;
+  } catch {
+    return false;
+  }
+}

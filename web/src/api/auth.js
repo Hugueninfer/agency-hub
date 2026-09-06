@@ -31,10 +31,11 @@ export async function login({ email, password }) {
 /**
  * Valida sessão atual (cookie). Use skipAuthEvent no cliente para não disparar logout global em 401.
  */
-export async function fetchMe() {
+export async function fetchMe(accessToken) {
   const { data } = await apiRequest(`${PREFIX}/me`, {
     method: "GET",
-    credentials: "include",
+    credentials: accessToken ? "omit" : "include",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
     skipAuthEvent: true,
   });
   return data;
@@ -55,12 +56,15 @@ export const createDemo = () => apiRequest("/api/v1/auth/demo", {
   skipAuthEvent: true,
 });
 
-export const resetDemo = () => apiRequest("/api/v1/auth/demo/reset", {
+export const resetDemo = (accessToken) => apiRequest("/api/v1/auth/demo/reset", {
   method: "POST",
   json: {},
+  ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
 });
 
-export const logoutDemo = () => apiRequest("/api/v1/auth/demo/logout", {
+export const logoutDemo = (accessToken) => apiRequest("/api/v1/auth/demo/logout", {
   method: "POST",
   json: {},
+  ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+  skipAuthEvent: true,
 });

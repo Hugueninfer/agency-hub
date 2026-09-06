@@ -2,6 +2,8 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import ThemeProvider from "./context/ThemeProvider";
 import AuthProvider from "./context/AuthProvider";
+import { useAuth } from "./hooks/useAuth";
+import DemoBanner from "./components/DemoBanner";
 import NotificationProvider from "./context/NotificationProvider";
 import MenuProvider from "./context/MenuProvider";
 import Sidebar from "./components/layout/Sidebar";
@@ -66,6 +68,7 @@ function AppShellLayout() {
       />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <DemoBanner />
         <main className="scrollbar-themed flex-1 overflow-y-auto px-0 py-8 md:px-0 lg:px-0">
           <Outlet />
         </main>
@@ -74,13 +77,11 @@ function AppShellLayout() {
   );
 }
 
-export default function App() {
+function AppRoutes() {
+  const { dataVersion } = useAuth();
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
           <ErrorBoundary>
-          <Routes>
+          <Routes key={dataVersion}>
             <Route
               path="/login"
               element={
@@ -195,6 +196,15 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

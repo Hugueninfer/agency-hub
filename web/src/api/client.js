@@ -3,7 +3,7 @@
  * Envelope: { success, message, data?, errors? }
  */
 
-import { clearDemoSession, loadDemoSession } from "../lib/demoSession";
+import { clearDemoSession, hasStoredDemoSession, loadDemoSession } from "../lib/demoSession";
 
 export class ApiError extends Error {
   constructor(message, { status, body, errors } = {}) {
@@ -36,6 +36,12 @@ const DEMO_AUTH_PATHS = new Set([
   "/api/v1/auth/demo",
   "/api/v1/auth/demo/reset",
   "/api/v1/auth/demo/logout",
+]);
+
+const PERSONAL_AUTH_PATHS = new Set([
+  "/sanctum/csrf-cookie",
+  "/api/v1/auth/login",
+  "/api/v1/auth/logout",
 ]);
 
 /**
@@ -81,10 +87,21 @@ export async function apiRequest(path, options = {}) {
   }
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
-  const demo = loadDemoSession();
-  const wasDemo = demo !== null;
+  const isPersonalAuth = PERSONAL_AUTH_PATHS.has(path);
+  const hadDemo = !isPersonalAuth && hasStoredDemoSession();
+  const demo = isPersonalAuth ? null : loadDemoSession();
+  if (isPersonalAuth) headers.delete("Authorization");
+  // An explicit token is a snapshot of the requesting identity (e.g. logout).
+  if (demo && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${demo.accessToken}`);
+  const requestToken = headers.get("Authorization");
+  const wasDemo = demo !== null || Boolean(requestToken?.startsWith("Bearer "));
   const isDemoRequest = wasDemo || DEMO_AUTH_PATHS.has(path);
-  if (demo) headers.set("Authorization", `Bearer ${demo.accessToken}`);
+  if (hadDemo && !demo && !requestToken && !DEMO_AUTH_PATHS.has(path)) {
+    if (!skipAuthEvent && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("api:unauthorized", { detail: { wasDemo: true } }));
+    }
+    throw new ApiError("Sua demonstração expirou.", { status: 401 });
+  }
 
   if (!isDemoRequest) applyXsrfHeader(headers, method);
 
@@ -144,10 +161,13 @@ export async function apiRequest(path, options = {}) {
 
   const treatAsAuthenticatedCall = !skipAuthEvent;
 
-  if (res.status === 401 && wasDemo) clearDemoSession();
+  const currentDemo = res.status === 401 && wasDemo ? loadDemoSession() : null;
+  const matchesDemo = wasDemo && (!currentDemo || requestToken === `Bearer ${currentDemo.accessToken}`);
+  if (res.status === 401 && matchesDemo) clearDemoSession();
 
   if (
     res.status === 401 &&
+    (!wasDemo || matchesDemo) &&
     treatAsAuthenticatedCall &&
     typeof window !== "undefined"
   ) {

@@ -89,6 +89,19 @@
 /* ─── Component Recipes ─────────────────────────────────────────── */
 @layer components {
 
+  .auth-page { background-color: var(--color-bg); }
+  .auth-card { padding: 0; }
+  .auth-product { background-color: var(--color-accent-purple-soft); }
+  .demo-entry { border-top: 1px solid var(--color-border); padding-top: 24px; }
+  .demo-banner { background-color: var(--color-accent-purple-soft); color: var(--color-txt-primary); }
+  .auth-alert { background-color: var(--color-surface-muted); border: 1px solid var(--color-border-strong); }
+  .auth-page button:focus-visible,
+  .demo-banner a:focus-visible,
+  .card button:focus-visible {
+    outline: 3px solid var(--color-accent-purple);
+    outline-offset: 3px;
+  }
+
   /* Card */
   .card {
     background-color: var(--color-card);

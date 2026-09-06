@@ -1,4 +1,4 @@
-/** Cache opcional do utilizador + idle timeout — secrets ficam em cookie httpOnly (sessão Laravel). */
+/** User cache only. Personal cookies and demo tokens are managed separately. */
 
 const STORAGE_KEY = "workflow_auth_session";
 
@@ -18,12 +18,12 @@ export function loadPersistedAuth() {
       !user ||
       typeof expiresAt !== "number" ||
       Number.isNaN(expiresAt) ||
-      Date.now() > expiresAt
+      Date.now() >= expiresAt
     ) {
       sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return { user, expiresAt };
+    return { user, expiresAt, identityKind: user.is_demo === true ? "demo" : "personal" };
   } catch {
     sessionStorage.removeItem(STORAGE_KEY);
     return null;
@@ -31,8 +31,9 @@ export function loadPersistedAuth() {
 }
 
 export function persistAuth(user) {
-  const expiresAt = Date.now() + SESSION_IDLE_MS;
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ user, expiresAt }));
+  const identityKind = user.is_demo === true ? "demo" : "personal";
+  const expiresAt = identityKind === "demo" ? Date.parse(user.expires_at) : Date.now() + SESSION_IDLE_MS;
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ user, expiresAt, identityKind }));
 }
 
 /** Extend expiry (called after user activity). */
@@ -45,6 +46,7 @@ export function touchAuthSession() {
       sessionStorage.removeItem(STORAGE_KEY);
       return;
     }
+    if (parsed.user.is_demo === true) return;
     const expiresAt = Date.now() + SESSION_IDLE_MS;
     sessionStorage.setItem(
       STORAGE_KEY,

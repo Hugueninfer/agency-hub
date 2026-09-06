@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "../api/client";
 import * as menuApi from "../api/menu";
 import { AlertBanner, PageShell, Panel } from "../components/page/PageLayout";
+import DemoResetCard from "../components/settings/DemoResetCard";
 
 const ICON_OPTIONS = [
   { value: "dashboard", label: "Dashboard" },
@@ -112,6 +113,7 @@ export default function SettingsMenuPage() {
 
   return (
     <PageShell>
+      <DemoResetCard />
       {banner && <AlertBanner banner={banner} onDismiss={() => setBanner(null)} />}
 
       <div className="flex items-center justify-between">
