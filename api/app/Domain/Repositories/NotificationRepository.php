@@ -2,6 +2,7 @@
 
 namespace App\Domain\Repositories;
 
+use App\Domain\Services\DemoWriteBudgetService;
 use App\Domain\Traits\Repository\DefaultFilterTrait;
 use App\Domain\Traits\Repository\SecurityFilterTrait;
 use App\Models\Notification;
@@ -72,11 +73,12 @@ class NotificationRepository extends BaseRepository
 
     public function markAllAsRead(int $tenantId, int $userId): int
     {
-        /** @var int */
-        return $this->model->newQuery()
+        $query = $this->model->newQuery()
             ->where('tenant_id', $tenantId)
             ->where('notifiable_id', $userId)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+            ->whereNull('read_at');
+        app(DemoWriteBudgetService::class)->reserve($query->count());
+
+        return $query->update(['read_at' => now()]);
     }
 }

@@ -33,9 +33,11 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:login');
 
-    Route::middleware(['workspace.auth', 'tenant'])->group(function () {
+    Route::middleware(['workspace.auth', 'tenant', 'demo.budget'])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::post('/auth/demo/reset', [DemoAuthController::class, 'reset']);
+        Route::post('/auth/demo/logout', [DemoAuthController::class, 'logout']);
 
         Route::get('/projects', [ProjectController::class, 'index'])
             ->middleware('permission:project.read');

@@ -2,18 +2,140 @@
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Services\DemoSessionService;
 use App\Domain\Services\TenantService;
+use App\Models\DemoToken;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class DemoLifecycleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['app.key' => 'base64:'.base64_encode(str_repeat('a', 32)), 'app.mode' => 'combined']);
+    }
+
+    public function test_reset_restores_only_caller_fixture_without_extending_expiry_or_consuming_budget(): void
+    {
+        $session = app(DemoSessionService::class)->create();
+        $token = DemoToken::findOrFail(hash('sha256', $session['token']));
+        $expiresAt = $token->tenant->expires_at->toIso8601String();
+        $other = app(DemoSessionService::class)->create();
+        $otherTenant = DemoToken::findOrFail(hash('sha256', $other['token']))->tenant;
+        $otherProject = $otherTenant->projects()->firstOrFail();
+        $otherProject->update(['name' => 'Keep other edit']);
+        $token->tenant->projects()->firstOrFail()->update(['name' => 'Reset this edit']);
+        $token->tenant->update(['demo_write_count' => 5000]);
+
+        $this->withToken($session['token'])->postJson('/api/v1/auth/demo/reset')->assertOk();
+
+        $this->assertDatabaseMissing('projects', ['tenant_id' => $token->tenant_id, 'name' => 'Reset this edit']);
+        $this->assertSame('Keep other edit', $otherProject->fresh()->name);
+        $this->assertSame(3, $token->tenant->projects()->count());
+        $this->assertSame(0, $token->tenant->fresh()->demo_write_count);
+        $this->assertSame($expiresAt, $token->tenant->fresh()->expires_at->toIso8601String());
+        $this->getJson('/api/v1/auth/me')->assertOk();
+    }
+
+    public function test_demo_logout_deletes_only_presented_digest_and_keeps_other_sessions(): void
+    {
+        $session = app(DemoSessionService::class)->create();
+        $token = DemoToken::findOrFail(hash('sha256', $session['token']));
+        $token->tenant->demoTokens()->create([
+            'digest' => hash('sha256', 'second-token'), 'user_id' => $token->user_id,
+            'expires_at' => $session['expires_at'],
+        ]);
+        $token->tenant->update(['demo_write_count' => 5000]);
+
+        $this->withToken($session['token'])->postJson('/api/v1/auth/demo/logout')->assertOk();
+
+        $this->getJson('/api/v1/auth/me')->assertUnauthorized();
+        $this->withToken('second-token')->getJson('/api/v1/auth/me')->assertOk();
+        $this->assertDatabaseHas('tenants', ['id' => $token->tenant_id, 'demo_write_count' => 5000]);
+    }
+
+    public function test_personal_user_cannot_call_demo_lifecycle_endpoints(): void
+    {
+        $this->actingAs($this->createUser($this->createTenant()), 'web');
+        $this->postJson('/api/v1/auth/demo/reset')->assertNotFound();
+        $this->postJson('/api/v1/auth/demo/logout')->assertNotFound();
+    }
+
+    public function test_generic_demo_logout_preserves_accompanying_personal_cookie(): void
+    {
+        $session = app(DemoSessionService::class)->create();
+        DemoToken::findOrFail(hash('sha256', $session['token']))->tenant->update(['demo_write_count' => 5000]);
+        $personal = $this->createUser($this->createTenant());
+        $this->withHeader('Origin', 'http://localhost');
+        $this->withSession(['login_web_'.sha1(SessionGuard::class) => $personal->id]);
+        Auth::forgetGuards();
+
+        $this->withToken($session['token'])->postJson('/api/v1/auth/logout')->assertOk();
+
+        $this->assertDatabaseMissing('demo_tokens', ['digest' => hash('sha256', $session['token'])]);
+        Auth::forgetGuards();
+        $this->withoutHeader('Authorization')->getJson('/api/v1/auth/me')->assertOk()
+            ->assertJsonPath('data.uuid', $personal->uuid);
+    }
+
+    public function test_expired_credentials_cannot_execute_reset(): void
+    {
+        $session = app(DemoSessionService::class)->create();
+        $token = DemoToken::findOrFail(hash('sha256', $session['token']));
+        $project = $token->tenant->projects()->firstOrFail();
+        $project->update(['name' => 'Preserve expired data']);
+        $token->update(['expires_at' => now()->subSecond()]);
+        $this->withToken($session['token'])->postJson('/api/v1/auth/demo/reset')->assertUnauthorized();
+        $this->assertSame('Preserve expired data', $project->fresh()->name);
+    }
+
+    public function test_cleanup_is_batched_idempotent_and_preserves_active_and_personal_tenants(): void
+    {
+        $originalCount = Tenant::count();
+        $oldest = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->subHours(2)]);
+        $newer = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->subHour()]);
+        $active = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->addHour()]);
+        $personal = $this->createTenant(['expires_at' => now()->subDay()]);
+        $user = $this->createUser($oldest);
+        $pat = $user->createToken('cleanup')->accessToken;
+
+        $this->artisan('demo:cleanup', ['--limit' => 1])->assertSuccessful();
+        $this->assertDatabaseMissing('tenants', ['id' => $oldest->id]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $pat->id]);
+        $this->assertDatabaseHas('tenants', ['id' => $newer->id]);
+        $this->artisan('demo:cleanup')->assertSuccessful();
+        $this->artisan('demo:cleanup')->assertSuccessful();
+        $this->assertDatabaseMissing('tenants', ['id' => $newer->id]);
+        $this->assertDatabaseCount('tenants', $originalCount + 2);
+        $this->assertDatabaseHas('tenants', ['id' => $active->id]);
+        $this->assertDatabaseHas('tenants', ['id' => $personal->id]);
+    }
+
+    public function test_cleanup_does_no_work_while_another_cleanup_holds_the_lock(): void
+    {
+        $expired = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->subHour()]);
+        $lock = Cache::lock('agency-hub-demo-cleanup', 300);
+        $this->assertTrue($lock->get());
+        try {
+            $this->artisan('demo:cleanup')->assertSuccessful();
+            $this->assertDatabaseHas('tenants', ['id' => $expired->id]);
+        } finally {
+            $lock->release();
+        }
+        $this->artisan('demo:cleanup')->assertSuccessful();
+        $this->assertDatabaseMissing('tenants', ['id' => $expired->id]);
+    }
 
     public function test_tenant_kind_defines_demo_status_and_lifecycle_casts(): void
     {

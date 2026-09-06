@@ -2,6 +2,7 @@
 
 namespace App\Domain\Services;
 
+use App\Domain\Exceptions\DemoCapacityExceeded;
 use App\Models\DemoToken;
 use App\Models\Tenant;
 use App\Models\User;
@@ -26,7 +27,7 @@ class DemoSessionService
             DB::table('demo_capacity_locks')->where('id', 1)->lockForUpdate()->sole();
             $now = CarbonImmutable::now();
             $active = Tenant::where('kind', 'demo')->where('expires_at', '>', $now)->count();
-            abort_if($active >= max(0, (int) config('services.demo.max_active')), 429, 'Demo capacity reached. Please try again later.');
+            throw_if($active >= max(0, (int) config('services.demo.max_active')), DemoCapacityExceeded::class);
 
             $expiresAt = $now->addHours(max(1, min(48, (int) config('services.demo.ttl_hours'))));
             $tenant = Tenant::create([

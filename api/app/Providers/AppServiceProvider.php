@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Domain\Services\DemoWriteBudgetService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(DemoWriteBudgetService::class);
     }
 
     /**
@@ -22,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach (['creating', 'updating'] as $event) {
+            Event::listen('eloquent.'.$event.': App\\Models\\*', function (string $event, array $models): void {
+                app(DemoWriteBudgetService::class)->reserve();
+            });
+        }
+
         if (! in_array(config('app.mode'), ['personal', 'demo', 'combined'], true)) {
             throw new \InvalidArgumentException('APP_MODE must be personal, demo, or combined.');
         }

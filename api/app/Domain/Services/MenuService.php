@@ -6,6 +6,7 @@ use App\Domain\Repositories\MenuItemRepository;
 use App\Models\MenuItem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class MenuService
 {
@@ -54,12 +55,13 @@ class MenuService
                 ];
 
                 if ($uuid && in_array($uuid, $existingUuids, true)) {
+                    app(DemoWriteBudgetService::class)->reserve();
                     MenuItem::query()
                         ->where('tenant_id', $tenantId)
                         ->where('uuid', $uuid)
                         ->update($data);
                 } else {
-                    $data['uuid'] = $uuid ?? (string) \Illuminate\Support\Str::uuid();
+                    $data['uuid'] = $uuid ?? (string) Str::uuid();
                     MenuItem::query()->create($data);
                 }
             }

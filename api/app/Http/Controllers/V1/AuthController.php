@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Domain\Services\DemoSessionService;
 use App\Domain\Services\UserAuthService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Auth\LoginRequest;
@@ -15,6 +16,7 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly UserAuthService $userAuthService,
+        private readonly DemoSessionService $demoSessions,
     ) {}
 
     public function login(LoginRequest $request)
@@ -46,7 +48,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $this->userAuthService->logoutSession($request);
+        if ($request->user()->isDemo()) {
+            $this->demoSessions->logout($request->bearerToken() ?? '');
+        } else {
+            $this->userAuthService->logoutSession($request);
+        }
 
         return $this->buildSuccessResponse(ToastMessage::get('auth.logout.success'));
     }

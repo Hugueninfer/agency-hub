@@ -72,7 +72,7 @@ class RbacService
             ->pluck('id')
             ->all();
 
-        $role->permissions()->sync($permissionIds);
+        app(DemoWriteBudgetService::class)->sync($role->permissions(), $permissionIds);
         $role->load('permissions');
 
         return $role;
@@ -99,7 +99,7 @@ class RbacService
             throw new NotFoundHttpException('User not found.');
         }
 
-        $user->roles()->syncWithoutDetaching([$role->id]);
+        app(DemoWriteBudgetService::class)->sync($user->roles(), [$role->id], false);
     }
 
     public function createUser(array $attributes, int $tenantId, ?UploadedFile $photo = null): User
@@ -127,7 +127,7 @@ class RbacService
                 'photo_path' => $photoPath,
             ]);
 
-            $user->roles()->syncWithoutDetaching([$role->id]);
+            app(DemoWriteBudgetService::class)->sync($user->roles(), [$role->id], false);
 
             return $user;
         });
@@ -180,7 +180,7 @@ class RbacService
             }
 
             $this->userRepository->update($payload, $user->id);
-            $user->roles()->sync([$role->id]);
+            app(DemoWriteBudgetService::class)->sync($user->roles(), [$role->id]);
             $user->load('roles:id,uuid,name');
 
             return $user->refresh();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateWorkspace;
+use App\Http\Middleware\EnforceDemoWriteBudget;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\SecurityHeaders;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'workspace.auth' => AuthenticateWorkspace::class,
             'tenant' => EnsureTenantContext::class,
+            'demo.budget' => EnforceDemoWriteBudget::class,
             'permission' => EnsureUserHasPermission::class,
         ]);
 

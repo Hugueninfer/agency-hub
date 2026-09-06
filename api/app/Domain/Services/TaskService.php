@@ -453,7 +453,7 @@ class TaskService
             ]);
         }
 
-        $task->assignees()->sync($userIds);
+        app(DemoWriteBudgetService::class)->sync($task->assignees(), $userIds);
     }
 
     /**
