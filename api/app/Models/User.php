@@ -38,6 +38,11 @@ class User extends BaseAuthenticatableWithUuid
         return $this->belongsTo(Tenant::class);
     }
 
+    public function isDemo(): bool
+    {
+        return $this->tenant?->kind === 'demo';
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user');

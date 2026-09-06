@@ -15,11 +15,16 @@ class Tenant extends BaseModel
         'logo_path',
         'drive_link',
         'drive_link_label',
+        'kind',
+        'expires_at',
+        'demo_write_count',
     ];
 
     protected function casts(): array
     {
         return [
+            'expires_at' => 'datetime',
+            'demo_write_count' => 'integer',
         ];
     }
 
@@ -40,5 +45,15 @@ class Tenant extends BaseModel
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function demoTokens(): HasMany
+    {
+        return $this->hasMany(DemoToken::class);
+    }
+
+    public function isDemo(): bool
+    {
+        return $this->kind === 'demo';
     }
 }
