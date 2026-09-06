@@ -11,7 +11,7 @@ RUN npm ci && npm run build
 # ============================================================
 # 2. BUILD — Laravel (PHP + Composer)
 # ============================================================
-FROM php:8.4-fpm-alpine AS laravel-build
+FROM php:8.4-fpm-alpine@sha256:49734670eccf414af884c2a0c2e558401e228615f8028f1c9fca30a0d4fb1bc2 AS laravel-build
 
 # PHP extensions (icu-libs pro intl)
 RUN apk add --no-cache \
@@ -39,11 +39,11 @@ RUN php artisan route:cache && \
 # ============================================================
 # 3. FINAL — PHP (com Nginx instalado dentro)
 # ============================================================
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm-alpine@sha256:49734670eccf414af884c2a0c2e558401e228615f8028f1c9fca30a0d4fb1bc2
 
 # Nginx + gettext (envsubst) + bash (debug) + libs de RUNTIME das extensoes PHP
 # (icu-libs=intl, libpng/libjpeg/freetype=gd, libzip=zip, oniguruma=mbstring)
-RUN apk add --no-cache nginx gettext bash supervisor \
+RUN apk add --no-cache nginx gettext bash supervisor curl \
     icu-libs libpng libjpeg-turbo freetype libzip oniguruma
 
 # Extensoes PHP compiladas no estagio de build (pdo_mysql, gd, intl, zip, bcmath...)
@@ -68,10 +68,13 @@ WORKDIR /app
 
 # Supervisord config (gerencia php-fpm + nginx + queue-worker)
 COPY supervisord.conf /etc/supervisord.conf
+COPY docker/supervisor-watchdog.py /usr/local/bin/supervisor-watchdog.py
 
 # Script de entrada (arquivo separado para evitar quoting bugs)
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-CMD ["/start.sh"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD curl --fail --silent --output /dev/null "http://127.0.0.1:${PORT:-80}/api/health" || exit 1
+
 CMD ["/start.sh"]

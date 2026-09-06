@@ -2,6 +2,8 @@
 .github
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 !.env.render.example
 **/node_modules
@@ -10,4 +12,10 @@
 api/build
 api/coverage*.txt
 api/phpdbg*.txt
+api/bootstrap/cache/*.php
+api/storage/logs/*
+api/storage/app/*
+api/storage/framework/cache/*
+api/storage/framework/sessions/*
+.superpowers
 docs/screenshots
