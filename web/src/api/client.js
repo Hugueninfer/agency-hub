@@ -3,6 +3,8 @@
  * Envelope: { success, message, data?, errors? }
  */
 
+import { clearDemoSession, loadDemoSession } from "../lib/demoSession";
+
 export class ApiError extends Error {
   constructor(message, { status, body, errors } = {}) {
     super(message);
@@ -29,6 +31,12 @@ function buildUrl(path) {
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+const DEMO_AUTH_PATHS = new Set([
+  "/api/v1/auth/demo",
+  "/api/v1/auth/demo/reset",
+  "/api/v1/auth/demo/logout",
+]);
 
 /**
  * Cookie XSRF-TOKEN (legível pelo JS) para header X-XSRF-TOKEN em pedidos mutáveis.
@@ -73,7 +81,12 @@ export async function apiRequest(path, options = {}) {
   }
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
-  applyXsrfHeader(headers, method);
+  const demo = loadDemoSession();
+  const wasDemo = demo !== null;
+  const isDemoRequest = wasDemo || DEMO_AUTH_PATHS.has(path);
+  if (demo) headers.set("Authorization", `Bearer ${demo.accessToken}`);
+
+  if (!isDemoRequest) applyXsrfHeader(headers, method);
 
   const defaultCredentials = typeof window !== "undefined" ? "include" : "same-origin";
 
@@ -91,7 +104,7 @@ export async function apiRequest(path, options = {}) {
     res = await fetch(url, {
       ...fetchInit,
       method,
-      credentials: credentialsOpt ?? defaultCredentials,
+      credentials: isDemoRequest ? "omit" : (credentialsOpt ?? defaultCredentials),
       headers,
       signal: combinedSignal,
       body: json !== undefined ? JSON.stringify(json) : fetchInit.body,
@@ -131,12 +144,16 @@ export async function apiRequest(path, options = {}) {
 
   const treatAsAuthenticatedCall = !skipAuthEvent;
 
+  if (res.status === 401 && wasDemo) clearDemoSession();
+
   if (
     res.status === 401 &&
     treatAsAuthenticatedCall &&
     typeof window !== "undefined"
   ) {
-    window.dispatchEvent(new CustomEvent("api:unauthorized"));
+    window.dispatchEvent(
+      new CustomEvent("api:unauthorized", { detail: { wasDemo } }),
+    );
   }
 
   if (!res.ok) {

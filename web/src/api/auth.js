@@ -48,3 +48,19 @@ export async function logout() {
     skipAuthEvent: true,
   });
 }
+
+export const createDemo = () => apiRequest("/api/v1/auth/demo", {
+  method: "POST",
+  json: {},
+  skipAuthEvent: true,
+});
+
+export const resetDemo = () => apiRequest("/api/v1/auth/demo/reset", {
+  method: "POST",
+  json: {},
+});
+
+export const logoutDemo = () => apiRequest("/api/v1/auth/demo/logout", {
+  method: "POST",
+  json: {},
+});
