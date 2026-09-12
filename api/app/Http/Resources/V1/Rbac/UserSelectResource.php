@@ -15,8 +15,8 @@ class UserSelectResource extends JsonResource
         }
 
         return [
-            'uuid'  => $this->uuid,
-            'name'  => $this->name,
+            'uuid' => $this->uuid,
+            'name' => $this->name,
             'email' => $this->email,
             'photo_url' => $photoUrl,
             'roles' => $this->whenLoaded('roles', function () {

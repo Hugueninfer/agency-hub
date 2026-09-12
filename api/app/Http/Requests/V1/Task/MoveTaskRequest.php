@@ -17,7 +17,7 @@ class MoveTaskRequest extends RequestAbstract
     {
         return [
             'board_column' => ['required', 'string', Rule::in(Task::boardColumns())],
-            'position'     => ['required', 'integer', 'min:0'],
+            'position' => ['required', 'integer', 'min:0'],
         ];
     }
 }

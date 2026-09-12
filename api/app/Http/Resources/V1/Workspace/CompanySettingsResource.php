@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Workspace;
 
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,7 +13,7 @@ class CompanySettingsResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var \App\Models\Tenant $tenant */
+        /** @var Tenant $tenant */
         $tenant = $this->resource;
 
         return [

@@ -54,13 +54,10 @@ export default function DashboardPage() {
     recent,
     projectProgress,
     totalBoards,
-    totalInvoices,
     draftInvoices,
     sentInvoices,
     paidInvoices,
     overdueInvoices,
-    rbacUsersCount,
-    rbacRolesCount,
     timeThisMonth,
   } = useWorkspaceOverview({
     isAuthenticated,
@@ -170,8 +167,6 @@ export default function DashboardPage() {
   }, [
     canReadProjects,
     canReadTasks,
-    canRbacUsers,
-    canRbacRoles,
     activeProjects,
     archivedProjects,
     totalProjects,
@@ -179,15 +174,7 @@ export default function DashboardPage() {
     openTasks,
     doneTasks,
     canReadBoards,
-    canReadInvoices,
     totalBoards,
-    totalInvoices,
-    draftInvoices,
-    sentInvoices,
-    paidInvoices,
-    overdueInvoices,
-    rbacUsersCount,
-    rbacRolesCount,
     timeThisMonth,
   ]);
 

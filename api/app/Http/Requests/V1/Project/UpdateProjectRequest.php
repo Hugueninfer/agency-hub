@@ -14,9 +14,9 @@ class UpdateProjectRequest extends RequestAbstract
     public function rules(): array
     {
         return [
-            'name'        => ['sometimes', 'required', 'string', 'max:160'],
+            'name' => ['sometimes', 'required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status'      => ['nullable', 'string', 'in:active,archived'],
+            'status' => ['nullable', 'string', 'in:active,archived'],
         ];
     }
 }

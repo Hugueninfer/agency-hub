@@ -14,6 +14,7 @@ use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DemoLifecycleTest extends TestCase
@@ -125,13 +126,26 @@ class DemoLifecycleTest extends TestCase
     public function test_cleanup_does_no_work_while_another_cleanup_holds_the_lock(): void
     {
         $expired = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->subHour()]);
-        $lock = Cache::lock('agency-hub-demo-cleanup', 300);
-        $this->assertTrue($lock->get());
+        $mysql = DB::connection()->getDriverName() === 'mysql';
+        $lock = $mysql ? null : Cache::lock('agency-hub-demo-cleanup', 300);
+        $connection = null;
+        if ($mysql) {
+            config(['database.connections.cleanup_lock_test' => config('database.connections.'.config('database.default'))]);
+            $connection = DB::connection('cleanup_lock_test');
+            $this->assertSame(1, (int) $connection->selectOne("SELECT GET_LOCK('agency-hub-demo-cleanup', 0) AS acquired")->acquired);
+        } else {
+            $this->assertTrue($lock->get());
+        }
         try {
             $this->artisan('demo:cleanup')->assertSuccessful();
             $this->assertDatabaseHas('tenants', ['id' => $expired->id]);
         } finally {
-            $lock->release();
+            if ($connection !== null) {
+                $connection->selectOne("SELECT RELEASE_LOCK('agency-hub-demo-cleanup')");
+                DB::purge('cleanup_lock_test');
+            } else {
+                $lock->release();
+            }
         }
         $this->artisan('demo:cleanup')->assertSuccessful();
         $this->assertDatabaseMissing('tenants', ['id' => $expired->id]);

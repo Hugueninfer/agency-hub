@@ -43,7 +43,7 @@ FROM php:8.4-fpm-alpine@sha256:49734670eccf414af884c2a0c2e558401e228615f8028f1c9
 
 # Nginx + gettext (envsubst) + bash (debug) + libs de RUNTIME das extensoes PHP
 # (icu-libs=intl, libpng/libjpeg/freetype=gd, libzip=zip, oniguruma=mbstring)
-RUN apk add --no-cache nginx gettext bash supervisor curl \
+RUN apk add --no-cache nginx gettext bash supervisor curl tini \
     icu-libs libpng libjpeg-turbo freetype libzip oniguruma
 
 # Extensoes PHP compiladas no estagio de build (pdo_mysql, gd, intl, zip, bcmath...)
@@ -77,4 +77,7 @@ RUN chmod +x /start.sh
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
     CMD curl --fail --silent --output /dev/null "http://127.0.0.1:${PORT:-80}/api/health" || exit 1
 
+# Reap child processes and let the watchdog terminate supervisord with a
+# nonzero status. Namespace PID 1 cannot be SIGKILLed by its own children.
+ENTRYPOINT ["/sbin/tini", "--", "docker-php-entrypoint"]
 CMD ["/start.sh"]

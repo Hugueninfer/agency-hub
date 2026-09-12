@@ -14,8 +14,8 @@ class UpdateSubtaskRequest extends RequestAbstract
     public function rules(): array
     {
         return [
-            'title'         => ['sometimes', 'required', 'string', 'max:200'],
-            'is_done'       => ['sometimes', 'boolean'],
+            'title' => ['sometimes', 'required', 'string', 'max:200'],
+            'is_done' => ['sometimes', 'boolean'],
             'assignee_uuid' => ['sometimes', 'nullable', 'string', 'uuid'],
         ];
     }

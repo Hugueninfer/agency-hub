@@ -36,10 +36,10 @@ export default function NotificationsPage() {
     load();
   }, [load]);
 
-  // Reset page when filter changes
-  useEffect(() => {
+  const changeFilter = (nextFilter) => {
+    setFilter(nextFilter);
     setPage(1);
-  }, [filter]);
+  };
 
   const items = Array.isArray(notifications?.data) ? notifications.data : [];
   const pagination = notifications?.meta || notifications || {};
@@ -75,7 +75,7 @@ export default function NotificationsPage() {
       {/* Filter tabs */}
       <div className="flex gap-2">
         <button
-          onClick={() => setFilter(null)}
+          onClick={() => changeFilter(null)}
           className={`px-4 py-2 rounded-xl text-caption font-medium transition-colors ${
             filter === null ? "btn-primary" : "btn-secondary"
           }`}
@@ -83,7 +83,7 @@ export default function NotificationsPage() {
           All
         </button>
         <button
-          onClick={() => setFilter("unread")}
+          onClick={() => changeFilter("unread")}
           className={`px-4 py-2 rounded-xl text-caption font-medium transition-colors ${
             filter === "unread" ? "btn-primary" : "btn-secondary"
           }`}

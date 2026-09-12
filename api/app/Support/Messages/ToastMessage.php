@@ -29,8 +29,8 @@ class ToastMessage
             ],
         ],
         'project' => [
-            'listed'  => 'Projects loaded successfully.',
-            'loaded'  => 'Project loaded successfully.',
+            'listed' => 'Projects loaded successfully.',
+            'loaded' => 'Project loaded successfully.',
             'created' => 'Project created successfully.',
             'updated' => 'Project updated successfully.',
             'deleted' => 'Project deleted successfully.',
@@ -41,15 +41,15 @@ class ToastMessage
             'settings_updated' => 'Company settings updated successfully.',
         ],
         'task' => [
-            'listed'   => 'Tasks loaded successfully.',
-            'loaded'   => 'Task loaded successfully.',
-            'created'  => 'Task created successfully.',
-            'updated'  => 'Task updated successfully.',
-            'deleted'  => 'Task deleted successfully.',
-            'moved'    => 'Task moved successfully.',
-            'comment'  => 'Comment added successfully.',
+            'listed' => 'Tasks loaded successfully.',
+            'loaded' => 'Task loaded successfully.',
+            'created' => 'Task created successfully.',
+            'updated' => 'Task updated successfully.',
+            'deleted' => 'Task deleted successfully.',
+            'moved' => 'Task moved successfully.',
+            'comment' => 'Comment added successfully.',
             'attachment_uploaded' => 'Image uploaded successfully.',
-            'attachment_deleted'  => 'Attachment removed successfully.',
+            'attachment_deleted' => 'Attachment removed successfully.',
         ],
         'board' => [
             'listed' => 'Boards loaded successfully.',
@@ -82,16 +82,16 @@ class ToastMessage
                 'listed' => 'Permissions loaded successfully.',
             ],
             'role' => [
-                'listed'              => 'Roles loaded successfully.',
-                'created'             => 'Role created successfully.',
+                'listed' => 'Roles loaded successfully.',
+                'created' => 'Role created successfully.',
                 'permission_assigned' => 'Permissions assigned to role successfully.',
             ],
             'user' => [
-                'listed'        => 'Users loaded successfully.',
+                'listed' => 'Users loaded successfully.',
                 'role_assigned' => 'Role assigned to user successfully.',
-                'created'       => 'User created successfully.',
-                'updated'       => 'User updated successfully.',
-                'deleted'       => 'User deleted successfully.',
+                'created' => 'User created successfully.',
+                'updated' => 'User updated successfully.',
+                'deleted' => 'User deleted successfully.',
             ],
         ],
         'notification' => [
@@ -114,7 +114,7 @@ class ToastMessage
         $value = self::MAP;
 
         foreach ($segments as $segment) {
-            if (!is_array($value) || !array_key_exists($segment, $value)) {
+            if (! is_array($value) || ! array_key_exists($segment, $value)) {
                 return $path;
             }
 

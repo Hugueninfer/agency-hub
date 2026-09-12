@@ -5,11 +5,11 @@ namespace App\Domain\Services;
 use App\Domain\Repositories\PermissionRepository;
 use App\Domain\Repositories\RoleRepository;
 use App\Domain\Repositories\UserRepository;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Role;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -46,9 +46,9 @@ class RbacService
     {
         /** @var Role $role */
         $role = $this->roleRepository->create([
-            'tenant_id'    => $tenantId,
-            'name'         => $attributes['name'],
-            'description'  => $attributes['description'] ?? null,
+            'tenant_id' => $tenantId,
+            'name' => $attributes['name'],
+            'description' => $attributes['description'] ?? null,
         ]);
 
         return $role;
@@ -62,7 +62,7 @@ class RbacService
             ->findByField('uuid', $roleUuid)
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             throw new NotFoundHttpException('Role not found.');
         }
 
@@ -86,7 +86,7 @@ class RbacService
             ->findByField('uuid', $roleUuid)
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             throw new NotFoundHttpException('Role not found.');
         }
 
@@ -95,7 +95,7 @@ class RbacService
             ->findByField('uuid', $userUuid)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             throw new NotFoundHttpException('User not found.');
         }
 
@@ -110,7 +110,7 @@ class RbacService
             ->findByField('uuid', $attributes['role_uuid'])
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             throw new NotFoundHttpException('Role not found.');
         }
 
@@ -139,14 +139,13 @@ class RbacService
         int $tenantId,
         ?UploadedFile $photo = null,
         bool $removePhoto = false,
-    ): User
-    {
+    ): User {
         $user = $this->userRepository
             ->scopeByTenantId($tenantId)
             ->findByField('uuid', $userUuid)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             throw new NotFoundHttpException('User not found.');
         }
 
@@ -156,7 +155,7 @@ class RbacService
             ->findByField('uuid', $attributes['role_uuid'])
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             throw new NotFoundHttpException('Role not found.');
         }
 
@@ -165,15 +164,15 @@ class RbacService
                 'name' => $attributes['name'],
                 'email' => $attributes['email'],
             ];
-            if (!empty($attributes['password'])) {
+            if (! empty($attributes['password'])) {
                 $payload['password'] = $attributes['password'];
             }
-            if ($removePhoto && !empty($user->photo_path)) {
+            if ($removePhoto && ! empty($user->photo_path)) {
                 Storage::disk('public')->delete($user->photo_path);
                 $payload['photo_path'] = null;
             }
             if ($photo) {
-                if (!empty($user->photo_path)) {
+                if (! empty($user->photo_path)) {
                     Storage::disk('public')->delete($user->photo_path);
                 }
                 $payload['photo_path'] = $photo->store('user-photos', 'public');
@@ -194,12 +193,12 @@ class RbacService
             ->findByField('uuid', $userUuid)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             throw new NotFoundHttpException('User not found.');
         }
 
         DB::transaction(function () use ($user) {
-            if (!empty($user->photo_path)) {
+            if (! empty($user->photo_path)) {
                 Storage::disk('public')->delete($user->photo_path);
             }
             $user->roles()->detach();

@@ -11,16 +11,17 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\TimeSession;
 use App\Models\User;
-use OpenSpout\Common\Entity\Row;
-use OpenSpout\Common\Entity\Style\CellAlignment;
-use OpenSpout\Common\Entity\Style\Color;
-use OpenSpout\Common\Entity\Style\Style;
-use OpenSpout\Writer\XLSX\Writer;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\XLSX\Writer;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TimeEntryService
 {
@@ -203,9 +204,7 @@ class TimeEntryService
     {
         $entry = $this->timeEntryRepository->findByUuidForTenant($entryUuid, $tenantId);
         if ($entry === null) {
-            throw ValidationException::withMessages([
-                'uuid' => ['Time entry not found.'],
-            ]);
+            throw new NotFoundHttpException('Time entry not found.');
         }
 
         if ((int) $entry->user_id !== $userId) {
@@ -256,9 +255,7 @@ class TimeEntryService
     {
         $entry = $this->timeEntryRepository->findByUuidForTenant($entryUuid, $tenantId);
         if ($entry === null) {
-            throw ValidationException::withMessages([
-                'uuid' => ['Time entry not found.'],
-            ]);
+            throw new NotFoundHttpException('Time entry not found.');
         }
 
         if ((int) $entry->user_id !== $userId) {
@@ -311,9 +308,9 @@ class TimeEntryService
         $entries = $this->listAllForExport($tenantId, $userUuids, $projectUuids, $dateFrom, $dateTo);
         $summary = $this->reportSummary($tenantId, $userUuids, $projectUuids, $dateFrom, $dateTo);
 
-        $tempPath = tempnam(sys_get_temp_dir(), 'time_report_') . '.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), 'time_report_').'.xlsx';
 
-        $writer = new Writer();
+        $writer = new Writer;
         $writer->openToFile($tempPath);
 
         // Styles
@@ -458,6 +455,7 @@ class TimeEntryService
         if ($dateTo) {
             return "Until $dateTo";
         }
+
         return 'All time';
     }
 

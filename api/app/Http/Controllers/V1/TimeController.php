@@ -17,6 +17,7 @@ use App\Support\Messages\ToastMessage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class TimeController extends Controller
@@ -208,6 +209,8 @@ class TimeController extends Controller
                 ToastMessage::get('time.entry_updated'),
                 new TimeEntryResource($entry),
             );
+        } catch (NotFoundHttpException $exception) {
+            return $this->buildErrorResponse($exception, Response::HTTP_NOT_FOUND);
         } catch (ValidationException $exception) {
             return response()->json([
                 'success' => false,
@@ -231,6 +234,8 @@ class TimeController extends Controller
                 null,
                 Response::HTTP_OK,
             );
+        } catch (NotFoundHttpException $exception) {
+            return $this->buildErrorResponse($exception, Response::HTTP_NOT_FOUND);
         } catch (ValidationException $exception) {
             return response()->json([
                 'success' => false,

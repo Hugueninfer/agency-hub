@@ -27,10 +27,10 @@ class ProjectService
     {
         /** @var Project */
         return $this->projectRepository->create([
-            'tenant_id'   => $tenantId,
-            'name'        => $data['name'],
+            'tenant_id' => $tenantId,
+            'name' => $data['name'],
             'description' => $data['description'] ?? null,
-            'status'      => $data['status'] ?? 'active',
+            'status' => $data['status'] ?? 'active',
         ]);
     }
 
@@ -54,9 +54,9 @@ class ProjectService
         $project = $this->getProjectByUuid($uuid, $tenantId);
 
         $project->update([
-            'name'        => $data['name'] ?? $project->name,
+            'name' => $data['name'] ?? $project->name,
             'description' => array_key_exists('description', $data) ? $data['description'] : $project->description,
-            'status'      => $data['status'] ?? $project->status,
+            'status' => $data['status'] ?? $project->status,
         ]);
 
         $project = $project->fresh();

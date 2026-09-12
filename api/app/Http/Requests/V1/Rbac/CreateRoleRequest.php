@@ -14,7 +14,7 @@ class CreateRoleRequest extends RequestAbstract
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:80'],
+            'name' => ['required', 'string', 'max:80'],
             'description' => ['nullable', 'string', 'max:255'],
         ];
     }

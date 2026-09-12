@@ -14,8 +14,8 @@ class StoreSubtaskRequest extends RequestAbstract
     public function rules(): array
     {
         return [
-            'title'         => ['required', 'string', 'max:200'],
-            'is_done'       => ['sometimes', 'boolean'],
+            'title' => ['required', 'string', 'max:200'],
+            'is_done' => ['sometimes', 'boolean'],
             'assignee_uuid' => ['sometimes', 'nullable', 'string', 'uuid'],
         ];
     }

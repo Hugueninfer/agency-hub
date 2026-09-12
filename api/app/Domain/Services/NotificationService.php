@@ -5,6 +5,7 @@ namespace App\Domain\Services;
 use App\Domain\Repositories\NotificationPreferenceRepository;
 use App\Domain\Repositories\NotificationRepository;
 use App\Models\Notification;
+use App\Models\NotificationPreference;
 use App\Support\Notifications\NotificationType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -38,7 +39,7 @@ class NotificationService
     }
 
     /**
-     * @return Collection<int, \App\Models\NotificationPreference>
+     * @return Collection<int, NotificationPreference>
      */
     public function getPreferences(int $tenantId, int $userId): Collection
     {
@@ -47,6 +48,7 @@ class NotificationService
         // If user has no preferences yet, create defaults
         if ($prefs->isEmpty()) {
             $this->preferenceRepository->setDefaultsForUser($tenantId, $userId);
+
             return $this->preferenceRepository->getPreferencesForUser($tenantId, $userId);
         }
 

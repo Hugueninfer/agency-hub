@@ -5,7 +5,7 @@ import { AlertBanner, PageShell, Panel } from "../components/page/PageLayout";
 import { useTheme } from "../hooks/useTheme";
 
 export default function SettingsCompanyPage() {
-  const { reloadSettings, driveLink, driveLinkLabel, logoUrl, companyName } = useTheme();
+  const { reloadSettings, companyName } = useTheme();
 
   const [banner, setBanner] = useState(null);
   const [saving, setSaving] = useState(false);

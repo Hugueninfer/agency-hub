@@ -14,8 +14,8 @@ class BoardResource extends JsonResource
             'name' => $this->name,
             'excalidraw_data' => $this->excalidraw_data ?: [
                 'elements' => [],
-                'appState' => new \stdClass(),
-                'files' => new \stdClass(),
+                'appState' => new \stdClass,
+                'files' => new \stdClass,
             ],
             'created_by' => $this->created_by,
             'updated_by' => $this->updated_by,

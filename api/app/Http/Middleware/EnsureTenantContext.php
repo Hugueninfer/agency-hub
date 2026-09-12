@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class EnsureTenantContext
 {
@@ -18,7 +18,7 @@ class EnsureTenantContext
     {
         $user = $request->user();
 
-        if (!$user || !$user->tenant_id) {
+        if (! $user || ! $user->tenant_id) {
             throw new AccessDeniedHttpException('Tenant context is required.');
         }
 

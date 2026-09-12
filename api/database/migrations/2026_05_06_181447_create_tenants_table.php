@@ -25,10 +25,10 @@ return new class extends Migration
         });
 
         DB::table('tenants')->insert([
-            'uuid'       => (string) Str::uuid(),
-            'name'       => 'Default Tenant',
-            'email'      => 'tenant@subforge.local',
-            'status'     => 'active',
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Default Tenant',
+            'email' => 'tenant@subforge.local',
+            'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

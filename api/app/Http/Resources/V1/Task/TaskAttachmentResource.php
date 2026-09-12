@@ -12,15 +12,15 @@ class TaskAttachmentResource extends JsonResource
         $url = rtrim($request->getSchemeAndHttpHost(), '/').'/storage/'.$this->path;
 
         return [
-            'uuid'           => $this->uuid,
-            'url'            => $url,
-            'original_name'  => $this->original_name,
-            'mime'           => $this->mime,
-            'size_bytes'     => (int) $this->size_bytes,
-            'created_at'     => $this->created_at?->toIso8601String(),
-            'uploaded_by'    => $this->whenLoaded('uploader', fn () => [
-                'uuid'  => $this->uploader->uuid,
-                'name'  => $this->uploader->name,
+            'uuid' => $this->uuid,
+            'url' => $url,
+            'original_name' => $this->original_name,
+            'mime' => $this->mime,
+            'size_bytes' => (int) $this->size_bytes,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'uploaded_by' => $this->whenLoaded('uploader', fn () => [
+                'uuid' => $this->uploader->uuid,
+                'name' => $this->uploader->name,
                 'email' => $this->uploader->email,
             ]),
         ];

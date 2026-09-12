@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\MenuItem;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
-use App\Models\MenuItem;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -59,7 +59,7 @@ class MultiTenantTestSeeder extends Seeder
             Permission::query()->updateOrCreate(
                 ['code' => $permission['code']],
                 [
-                    'name'        => $permission['name'],
+                    'name' => $permission['name'],
                     'description' => null,
                 ],
             );
@@ -69,8 +69,8 @@ class MultiTenantTestSeeder extends Seeder
         $tenant = Tenant::query()->firstOrCreate(
             ['email' => $tenantEmail],
             [
-                'uuid'   => (string) Str::uuid(),
-                'name'   => 'Multi-Tenant Test Org',
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Multi-Tenant Test Org',
                 'status' => 'active',
             ],
         );
@@ -78,10 +78,10 @@ class MultiTenantTestSeeder extends Seeder
         $ownerRole = Role::query()->updateOrCreate(
             [
                 'tenant_id' => $tenant->id,
-                'name'      => 'owner',
+                'name' => 'owner',
             ],
             [
-                'uuid'        => (string) Str::uuid(),
+                'uuid' => (string) Str::uuid(),
                 'description' => 'Full access (multi-tenant test)',
             ],
         );
@@ -94,10 +94,10 @@ class MultiTenantTestSeeder extends Seeder
         $user = User::query()->updateOrCreate(
             ['email' => $userEmail],
             [
-                'uuid'      => (string) Str::uuid(),
+                'uuid' => (string) Str::uuid(),
                 'tenant_id' => $tenant->id,
-                'name'      => 'Multi-Tenant Admin',
-                'password'  => $plainPassword,
+                'name' => 'Multi-Tenant Admin',
+                'password' => $plainPassword,
             ],
         );
 

@@ -98,10 +98,11 @@ class DemoFixtureServiceTest extends TestCase
             }
         }
         $highlight = Task::whereTenantId($first->id)->where('title', 'Refine Aurora identity concepts')->firstOrFail();
-        $this->assertSame('2026-09-08', $highlight->due_date);
+        $this->assertSame('2026-09-08', $highlight->due_date->toDateString());
         $this->assertSame(2, $highlight->comments()->count());
         $this->assertGreaterThanOrEqual(3, $highlight->subtasks()->count());
-        $this->assertDatabaseHas('tasks', ['tenant_id' => $second->id, 'title' => $highlight->title, 'due_date' => '2026-09-09']);
+        $secondHighlight = Task::whereTenantId($second->id)->where('title', $highlight->title)->firstOrFail();
+        $this->assertSame('2026-09-09', $secondHighlight->due_date->toDateString());
         $this->assertSame(['2026-08-28', '2026-09-04'], DB::table('time_entries')->where('tenant_id', $first->id)->distinct()->orderBy('worked_date')->pluck('worked_date')->map(fn ($date) => CarbonImmutable::parse($date)->toDateString())->all());
         $this->assertSame(['2026-09-04', '2026-09-07'], DB::table('time_entries')->where('tenant_id', $second->id)->distinct()->orderBy('worked_date')->pluck('worked_date')->map(fn ($date) => CarbonImmutable::parse($date)->toDateString())->all());
     }

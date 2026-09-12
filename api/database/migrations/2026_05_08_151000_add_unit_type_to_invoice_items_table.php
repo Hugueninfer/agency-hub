@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoice_items', function (Blueprint $table) {
-            if (!Schema::hasColumn('invoice_items', 'unit_type')) {
+            if (! Schema::hasColumn('invoice_items', 'unit_type')) {
                 $table->string('unit_type', 24)->default('quantity')->after('description');
             }
         });

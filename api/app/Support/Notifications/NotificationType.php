@@ -5,11 +5,17 @@ namespace App\Support\Notifications;
 class NotificationType
 {
     const TASK_ASSIGNED = 'task_assigned';
+
     const TASK_COMMENT_ADDED = 'task_comment_added';
+
     const TASK_MENTIONED = 'task_mentioned';
+
     const TASK_STATUS_CHANGED = 'task_status_changed';
+
     const TASK_COMPLETED = 'task_completed';
+
     const PROJECT_UPDATED = 'project_updated';
+
     const INVOICE_STATUS_CHANGED = 'invoice_status_changed';
 
     /**

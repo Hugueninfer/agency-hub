@@ -88,8 +88,8 @@ class BoardService
     {
         return [
             'elements' => [],
-            'appState' => new \stdClass(),
-            'files' => new \stdClass(),
+            'appState' => new \stdClass,
+            'files' => new \stdClass,
         ];
     }
 }

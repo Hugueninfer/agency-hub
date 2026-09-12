@@ -10,13 +10,13 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserHasPermission
 {
     /**
-     * @param  \Closure(Request): Response  $next
+     * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $user = $request->user();
 
-        if ($user === null || !$user->hasPermission($permission)) {
+        if ($user === null || ! $user->hasPermission($permission)) {
             return response()->json([
                 'success' => false,
                 'message' => ToastMessage::get('auth.forbidden.generic'),

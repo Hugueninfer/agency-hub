@@ -28,6 +28,7 @@ class Task extends BaseModel
     ];
 
     protected $casts = [
+        'due_date' => 'date',
         'source_metadata' => 'array',
     ];
 

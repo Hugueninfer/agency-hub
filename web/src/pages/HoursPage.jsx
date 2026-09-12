@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../api/client";
 import * as projectsApi from "../api/projects";
 import * as timeApi from "../api/time";
