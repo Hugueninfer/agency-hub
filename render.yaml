@@ -3,81 +3,30 @@ services:
   - type: web
     name: agency-hub
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: virginia
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeployTrigger: "off"
     healthCheckPath: /api/health
     maxShutdownDelaySeconds: 100
-    disk:
-      name: agency-hub-uploads
-      mountPath: /app/storage/app/public
-      sizeGB: 10
     envVars:
       - fromGroup: agency-hub-runtime
       # Render generation cannot add Laravel's required base64: prefix.
       - key: APP_KEY
         sync: false
       - key: DB_HOST
-        fromService:
-          type: pserv
-          name: agency-hub-mysql
-          property: host
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
       - key: DB_PASSWORD
-        fromService:
-          type: pserv
-          name: agency-hub-mysql
-          envVarKey: MYSQL_PASSWORD
-
-  - type: pserv
-    name: agency-hub-mysql
-    runtime: image
-    plan: 1c-2g
-    region: virginia
-    image:
-      url: docker.io/library/mysql:8.4.6@sha256:869218921e61d6c3c89820955d63cca42971f0e3e6c1e2792247bbd944ebc6e9
-    disk:
-      name: agency-hub-mysql-data
-      mountPath: /var/lib/mysql
-      sizeGB: 20
-    envVars:
-      - key: MYSQL_DATABASE
-        value: agency_hub
-      - key: MYSQL_USER
-        value: agency_hub
-      - key: MYSQL_PASSWORD
-        generateValue: true
-      - key: MYSQL_ROOT_PASSWORD
-        generateValue: true
-
-  - type: cron
-    name: agency-hub-demo-cleanup
-    runtime: docker
-    plan: 0.5c-512mb
-    region: virginia
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    autoDeployTrigger: "off"
-    schedule: "0 * * * *"
-    dockerCommand: php artisan demo:cleanup --limit=100
-    envVars:
-      - fromGroup: agency-hub-runtime
-      - key: APP_KEY
-        fromService:
-          type: web
-          name: agency-hub
-          envVarKey: APP_KEY
-      - key: DB_HOST
-        fromService:
-          type: pserv
-          name: agency-hub-mysql
-          property: host
-      - key: DB_PASSWORD
-        fromService:
-          type: pserv
-          name: agency-hub-mysql
-          envVarKey: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_ATTR_SSL_CA
+        sync: false
 
 envVarGroups:
   - name: agency-hub-runtime
@@ -98,12 +47,6 @@ envVarGroups:
         value: https://agency-hub.onrender.com
       - key: DB_CONNECTION
         value: mysql
-      - key: DB_PORT
-        value: "3306"
-      - key: DB_DATABASE
-        value: agency_hub
-      - key: DB_USERNAME
-        value: agency_hub
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
