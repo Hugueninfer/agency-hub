@@ -11,10 +11,9 @@ test_dir=$(mktemp -d)
 trap 'rm -rf "$test_dir"' EXIT
 
 commands=$(awk '
-  /^## Tests$/ { in_tests = 1; next }
-  in_tests && /^```(bash)?$/ { in_block = !in_block; next }
-  in_tests && in_block { print }
-  in_tests && !in_block && /^## / { exit }
+  /^## Desenvolvimento e testes$/ { in_tests = 1; next }
+  in_tests && /^## / { exit }
+  in_tests && /^\(cd (api|web) && / { print }
 ' "$repo_root/README.md")
 
 printf '%s\n' "$commands" | grep -Fqx '(cd api && composer install && php artisan test)'
