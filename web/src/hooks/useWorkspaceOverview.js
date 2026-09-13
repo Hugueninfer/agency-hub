@@ -117,69 +117,60 @@ export function useWorkspaceOverview({
     setError(null);
 
     try {
-      let projectList = [];
-      if (canReadProjects) {
-        projectList = await projectsApi.listProjects();
-      }
-      setProjects(projectList);
-
-      const taskMap = new Map();
-      if (canReadTasks && projectList.length > 0) {
-        const batches = await batchedTasksByProject(projectList, (uuid) =>
-          tasksApi.listTasks(uuid),
-        );
-        for (const p of projectList) {
-          taskMap.set(p.uuid, batches.get(p.uuid) ?? []);
+      const projectsAndTasks = (async () => {
+        let projectList = [];
+        if (canReadProjects) {
+          projectList = await projectsApi.listProjects();
         }
-      }
-      setTasksByProjectUuid(taskMap);
 
-      if (canReadBoards) {
-        setBoards(await boardsApi.listBoards());
-      } else {
-        setBoards([]);
-      }
-
-      if (canReadInvoices) {
-        setInvoices(await invoicesApi.listInvoices());
-      } else {
-        setInvoices([]);
-      }
-
-      try {
-        if (canRbacUsers) {
-          const u = await rbacApi.listUsers();
-          setRbacUsersCount(u.length);
-        } else setRbacUsersCount(null);
-      } catch {
-        setRbacUsersCount(null);
-      }
-      try {
-        if (canRbacRoles) {
-          const r = await rbacApi.listRoles();
-          setRbacRolesCount(r.length);
-        } else setRbacRolesCount(null);
-      } catch {
-        setRbacRolesCount(null);
-      }
-
-      if (canAccessTime) {
-        try {
-          const summary = await timeApi.reportSummary({
-            date_from: startOfMonthIso(),
-            date_to: todayIso(),
-          });
-          setTimeThisMonth({
-            applicable: true,
-            minutes: summary?.grand_total_minutes ?? 0,
-            error: false,
-          });
-        } catch {
-          setTimeThisMonth({ applicable: true, minutes: null, error: true });
+        const taskMap = new Map();
+        if (canReadTasks && projectList.length > 0) {
+          const batches = await batchedTasksByProject(projectList, (uuid) =>
+            tasksApi.listTasks(uuid),
+          );
+          for (const p of projectList) {
+            taskMap.set(p.uuid, batches.get(p.uuid) ?? []);
+          }
         }
-      } else {
-        setTimeThisMonth({ applicable: false, minutes: null, error: false });
-      }
+
+        return { projectList, taskMap };
+      })();
+
+      const boardsRequest = canReadBoards ? boardsApi.listBoards() : Promise.resolve([]);
+      const invoicesRequest = canReadInvoices ? invoicesApi.listInvoices() : Promise.resolve([]);
+      const usersCountRequest = canRbacUsers
+        ? rbacApi.listUsers().then((users) => users.length).catch(() => null)
+        : Promise.resolve(null);
+      const rolesCountRequest = canRbacRoles
+        ? rbacApi.listRoles().then((roles) => roles.length).catch(() => null)
+        : Promise.resolve(null);
+      const timeRequest = canAccessTime
+        ? timeApi.reportSummary({
+          date_from: startOfMonthIso(),
+          date_to: todayIso(),
+        }).then((summary) => ({
+          applicable: true,
+          minutes: summary?.grand_total_minutes ?? 0,
+          error: false,
+        })).catch(() => ({ applicable: true, minutes: null, error: true }))
+        : Promise.resolve({ applicable: false, minutes: null, error: false });
+
+      const [core, boardList, invoiceList, usersCount, rolesCount, timeSummary] = await Promise.all([
+        projectsAndTasks,
+        boardsRequest,
+        invoicesRequest,
+        usersCountRequest,
+        rolesCountRequest,
+        timeRequest,
+      ]);
+
+      setProjects(core.projectList);
+      setTasksByProjectUuid(core.taskMap);
+      setBoards(boardList);
+      setInvoices(invoiceList);
+      setRbacUsersCount(usersCount);
+      setRbacRolesCount(rolesCount);
+      setTimeThisMonth(timeSummary);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not load workspace overview.");
       setProjects([]);
