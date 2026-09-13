@@ -38,9 +38,8 @@ docker compose stop
 ```bash
 bash scripts/test-validate-render-free.sh
 bash scripts/validate-render-free.sh
-cd api && composer install
-cd api && php artisan test
-cd web && npm test
+(cd api && composer install && php artisan test)
+(cd web && npm ci && npm test)
 ```
 
 ## Zero-cost deployment architecture

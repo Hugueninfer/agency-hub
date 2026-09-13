@@ -4,6 +4,7 @@ set -eu
 cd /app
 
 php -r '$key = getenv("APP_KEY") ?: ""; if (!str_starts_with($key, "base64:") || strlen(base64_decode(substr($key, 7), true) ?: "") !== 32) { fwrite(STDERR, "[start] APP_KEY must be a base64-prefixed 32-byte key.\n"); exit(1); }'
+/usr/local/bin/bootstrap-aiven-ca.sh
 
 echo "[start] Starting container..."
 

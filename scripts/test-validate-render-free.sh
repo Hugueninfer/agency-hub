@@ -11,6 +11,7 @@ reset_fixture() {
   cp "$repo_root/render.yaml" "$test_dir/render.yaml"
   cp "$repo_root/scripts/validate-render-free.sh" "$test_dir/scripts/validate-render-free.sh"
   cp "$repo_root/README.md" "$test_dir/README.md"
+  cp "$repo_root/.env.render.example" "$test_dir/.env.render.example"
   cp "$repo_root/docs/operations/render.md" "$test_dir/docs/operations/render.md"
 }
 
@@ -48,17 +49,17 @@ assert_rejected() {
 reset_fixture
 run_validator
 
-sed -i '/- key: DB_PASSWORD/{n;s/sync: false/sync: false\n        value: hard-coded/;}' "$test_dir/render.yaml"
+sed -i '/- key: AIVEN_CA_CERT/{n;s/sync: false/sync: false\n        value: hard-coded/;}' "$test_dir/render.yaml"
 output_file="$test_dir/validator-output"
 set +e
 run_validator >"$output_file" 2>&1
 validator_status=$?
 set -e
 if [ "$validator_status" -eq 0 ]; then
-  echo "validator accepted a value-backed required secret marked sync: false" >&2
+  echo "validator accepted a value-backed AIVEN CA secret marked sync: false" >&2
   exit 1
 fi
-grep -Fqx "required secret must not define a source: DB_PASSWORD" "$output_file"
+grep -Fqx "required secret must not define a source: AIVEN_CA_CERT" "$output_file"
 
 while IFS='|' read -r target needle expected; do
   [ -n "$target" ] || continue
@@ -72,8 +73,8 @@ docs/operations/render.md|wakeup is about one minute|runbook missing required de
 docs/operations/render.md|ephemeral|runbook missing required deployment detail: ephemeral
 docs/operations/render.md|no payment method|runbook missing required deployment detail: no payment method
 docs/operations/render.md|php artisan migrate --force|runbook missing required deployment detail: php artisan migrate --force
-docs/operations/render.md|aiven-ca.pem|runbook missing required deployment detail: aiven-ca.pem
-docs/operations/render.md|/etc/secrets/aiven-ca.pem|runbook missing required deployment detail: /etc/secrets/aiven-ca.pem
+docs/operations/render.md|Aiven CA PEM|runbook missing required deployment detail: Aiven CA PEM
+docs/operations/render.md|/tmp/agency-hub-aiven-ca.pem|runbook missing required deployment detail: /tmp/agency-hub-aiven-ca.pem
 docs/operations/render.md|demo uploads are blocked|runbook missing required deployment detail: demo uploads are blocked
 docs/operations/render.md|at most five|runbook missing required deployment detail: at most five
 docs/operations/render.md|opportunistically|runbook missing required deployment detail: opportunistically
@@ -85,13 +86,17 @@ docs/operations/render.md|DB_PORT|runbook missing required secret key: DB_PORT
 docs/operations/render.md|DB_DATABASE|runbook missing required secret key: DB_DATABASE
 docs/operations/render.md|DB_USERNAME|runbook missing required secret key: DB_USERNAME
 docs/operations/render.md|DB_PASSWORD|runbook missing required secret key: DB_PASSWORD
-docs/operations/render.md|MYSQL_ATTR_SSL_CA|runbook missing required secret key: MYSQL_ATTR_SSL_CA
+docs/operations/render.md|AIVEN_CA_CERT|runbook missing required secret key: AIVEN_CA_CERT
+render.yaml|/tmp/agency-hub-aiven-ca.pem|MYSQL_ATTR_SSL_CA must use the fixed non-secret runtime path
+.env.render.example|AIVEN_CA_CERT=|environment example must declare AIVEN_CA_CERT blank
+.env.render.example|MYSQL_ATTR_SSL_CA=/tmp/agency-hub-aiven-ca.pem|environment example must use the fixed non-secret runtime path
 README.md|Agency Hub|README missing required deployment detail: Agency Hub
 README.md|24-hour demo|README missing required deployment detail: 24-hour demo
 README.md|Render Free|README missing required deployment detail: Render Free
 README.md|Aiven MySQL Free|README missing required deployment detail: Aiven MySQL Free
 README.md|PHP 8.4 runtime|README missing required deployment detail: PHP 8.4 runtime
-README.md|cd api && php artisan test|README missing required deployment detail: cd api && php artisan test
+README.md|(cd api && composer install && php artisan test)|README missing required deployment detail: (cd api && composer install && php artisan test)
+README.md|(cd web && npm ci && npm test)|README missing required deployment detail: (cd web && npm ci && npm test)
 README.md|https://github.com/Hugueninfer/agency-hub|README missing required deployment detail: https://github.com/Hugueninfer/agency-hub
 README.md|demo uploads are blocked|README missing required deployment detail: demo uploads are blocked
 CASES

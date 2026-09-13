@@ -43,7 +43,7 @@ FROM php:8.4-fpm-alpine@sha256:49734670eccf414af884c2a0c2e558401e228615f8028f1c9
 
 # Nginx + gettext (envsubst) + bash (debug) + libs de RUNTIME das extensoes PHP
 # (icu-libs=intl, libpng/libjpeg/freetype=gd, libzip=zip, oniguruma=mbstring)
-RUN apk add --no-cache nginx gettext bash supervisor curl tini \
+RUN apk add --no-cache nginx gettext bash supervisor curl tini openssl \
     icu-libs libpng libjpeg-turbo freetype libzip oniguruma
 
 # Extensoes PHP compiladas no estagio de build (pdo_mysql, gd, intl, zip, bcmath...)
@@ -72,7 +72,8 @@ COPY docker/supervisor-watchdog.py /usr/local/bin/supervisor-watchdog.py
 
 # Script de entrada (arquivo separado para evitar quoting bugs)
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY scripts/bootstrap-aiven-ca.sh /usr/local/bin/bootstrap-aiven-ca.sh
+RUN chmod +x /start.sh /usr/local/bin/bootstrap-aiven-ca.sh
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
     CMD curl --fail --silent --output /dev/null "http://127.0.0.1:${PORT:-80}/api/health" || exit 1
