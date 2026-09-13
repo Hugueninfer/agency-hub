@@ -5,6 +5,7 @@ export async function getConfig() {
     method: "GET",
     credentials: "omit",
     skipAuthEvent: true,
+    unauthenticated: true,
   });
   return data ?? null;
 }

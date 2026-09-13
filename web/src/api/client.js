@@ -67,7 +67,7 @@ function applyXsrfHeader(headers, method) {
 
 /**
  * @param {string} path - e.g. /api/v1/auth/login
- * @param {RequestInit & { json?: unknown, skipAuthEvent?: boolean }} options
+ * @param {RequestInit & { json?: unknown, skipAuthEvent?: boolean, unauthenticated?: boolean }} options
  */
 export async function apiRequest(path, options = {}) {
   const {
@@ -75,6 +75,7 @@ export async function apiRequest(path, options = {}) {
     headers: extraHeaders,
     signal: userSignal,
     skipAuthEvent,
+    unauthenticated = false,
     credentials: credentialsOpt,
     ...fetchInit
   } = options;
@@ -87,16 +88,16 @@ export async function apiRequest(path, options = {}) {
   }
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
-  const isPersonalAuth = PERSONAL_AUTH_PATHS.has(path);
-  const hadDemo = !isPersonalAuth && hasStoredDemoSession();
-  const demo = isPersonalAuth ? null : loadDemoSession();
-  if (isPersonalAuth) headers.delete("Authorization");
+  const isPersonalAuth = !unauthenticated && PERSONAL_AUTH_PATHS.has(path);
+  const hadDemo = !unauthenticated && !isPersonalAuth && hasStoredDemoSession();
+  const demo = unauthenticated || isPersonalAuth ? null : loadDemoSession();
+  if (unauthenticated || isPersonalAuth) headers.delete("Authorization");
   // An explicit token is a snapshot of the requesting identity (e.g. logout).
   if (demo && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${demo.accessToken}`);
   const requestToken = headers.get("Authorization");
   const wasDemo = demo !== null || Boolean(requestToken?.startsWith("Bearer "));
-  const isDemoRequest = wasDemo || DEMO_AUTH_PATHS.has(path);
-  if (hadDemo && !demo && !requestToken && !DEMO_AUTH_PATHS.has(path)) {
+  const isDemoRequest = !unauthenticated && (wasDemo || DEMO_AUTH_PATHS.has(path));
+  if (!unauthenticated && hadDemo && !demo && !requestToken && !DEMO_AUTH_PATHS.has(path)) {
     if (!skipAuthEvent && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("api:unauthorized", { detail: { wasDemo: true } }));
     }
@@ -121,7 +122,7 @@ export async function apiRequest(path, options = {}) {
     res = await fetch(url, {
       ...fetchInit,
       method,
-      credentials: isDemoRequest ? "omit" : (credentialsOpt ?? defaultCredentials),
+      credentials: unauthenticated || isDemoRequest ? "omit" : (credentialsOpt ?? defaultCredentials),
       headers,
       signal: combinedSignal,
       body: json !== undefined ? JSON.stringify(json) : fetchInit.body,

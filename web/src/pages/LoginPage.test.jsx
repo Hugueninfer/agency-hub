@@ -58,3 +58,18 @@ it("keeps demo unavailable when configuration disables it", async () => {
   await screen.findByText(/demonstração indisponível/i);
   expect(screen.getByRole("button", { name: "Experimentar demonstração" })).toBeDisabled();
 });
+
+it("loads public configuration and starts a new demo after the previous demo expired", async () => {
+  sessionStorage.setItem("agency-hub.demo", JSON.stringify({ expired: true }));
+  setup();
+
+  const button = await screen.findByRole("button", { name: "Experimentar demonstração" });
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch.mock.calls[0][0]).toBe("/api/v1/config");
+  expect(fetch.mock.calls[0][1]).toMatchObject({ credentials: "omit" });
+
+  fireEvent.click(button);
+  await waitFor(() => expect(startDemo).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole("status")).toHaveTextContent("/");
+});
