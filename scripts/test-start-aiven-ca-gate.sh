@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "${START_GATE_BOOTSTRAP_STUB:-}" = "1" ]; then
+if [ "${START_GATE_BOOTSTRAP_STUB:-}" = "1" ] && [ "${0##*/}" = "bootstrap-aiven-ca.sh" ]; then
   exit 97
 fi
 if [ "${START_GATE_COMMAND_STUB:-}" = "1" ]; then
+  if [ "${0##*/}" = "supervisord" ]; then
+    echo '[test] reached supervisord'
+  fi
   exit 0
 fi
 
@@ -25,7 +28,8 @@ run_start() {
     '
 }
 
-run_start "$repo_root/scripts/test-start-aiven-ca-gate.sh"
+local_output=$(run_start "$repo_root/scripts/test-start-aiven-ca-gate.sh")
+printf '%s\n' "$local_output" | grep -Fqx '[test] reached supervisord'
 
 assert_configured_failure() {
   local certificate_value=$1
@@ -52,6 +56,10 @@ assert_configured_failure() {
     exit 1
   fi
   printf '%s\n' "$output" | grep -Fqx "[start] AIVEN_CA_CERT must contain a PEM certificate."
+  if printf '%s\n' "$output" | grep -Fqx '[test] reached supervisord'; then
+    echo "configured startup continued after an invalid Aiven CA" >&2
+    exit 1
+  fi
   if [ -n "$certificate_value" ] && printf '%s\n' "$output" | grep -Fq -- "$certificate_value"; then
     echo "configured startup leaked the invalid certificate value" >&2
     exit 1
@@ -60,3 +68,5 @@ assert_configured_failure() {
 
 assert_configured_failure ''
 assert_configured_failure 'not a PEM certificate'
+
+echo 'PASS: local startup reaches supervisord; missing and malformed Aiven CA fail closed'
