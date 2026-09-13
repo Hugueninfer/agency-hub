@@ -21,6 +21,7 @@ temporary_path=$(mktemp "${ca_path}.XXXXXX")
 trap 'rm -f "$temporary_path"' EXIT HUP INT TERM
 umask 077
 printf '%s\n' "$ca_certificate" >"$temporary_path"
-chmod 600 "$temporary_path"
+chown www-data:www-data "$temporary_path"
+chmod 640 "$temporary_path"
 mv -f "$temporary_path" "$ca_path"
 trap - EXIT HUP INT TERM
