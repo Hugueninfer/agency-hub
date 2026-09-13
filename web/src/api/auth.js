@@ -56,6 +56,7 @@ export const createDemo = () => apiRequest("/api/v1/auth/demo", {
   method: "POST",
   json: {},
   skipAuthEvent: true,
+  timeoutMs: 60_000,
 });
 
 export const resetDemo = (accessToken) => apiRequest("/api/v1/auth/demo/reset", {

@@ -77,6 +77,7 @@ export async function apiRequest(path, options = {}) {
     skipAuthEvent,
     unauthenticated = false,
     credentials: credentialsOpt,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
     ...fetchInit
   } = options;
 
@@ -109,7 +110,7 @@ export async function apiRequest(path, options = {}) {
   const defaultCredentials = typeof window !== "undefined" ? "include" : "same-origin";
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   if (userSignal) {
     if (userSignal.aborted) controller.abort();
     else userSignal.addEventListener("abort", () => controller.abort(), { once: true });
