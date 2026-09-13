@@ -22,15 +22,41 @@ end
 abort "billable service type present" if services.any? { |item| %w[pserv cron worker].include?(item["type"]) }
 
 runbook = File.read(File.join(repo_root, "docs/operations/render.md"))
-%w[Aiven Free 1\ GB 15\ minutes ephemeral no\ payment\ method php\ artisan\ migrate\ --force].each do |detail|
+[
+  "Aiven MySQL Free",
+  "Render Free",
+  "1 GB",
+  "spins down after 15 idle minutes",
+  "wakeup is about one minute",
+  "ephemeral",
+  "no payment method",
+  "php artisan migrate --force",
+  "aiven-ca.pem",
+  "/etc/secrets/aiven-ca.pem",
+  "demo uploads are blocked",
+  "at most five",
+  "opportunistically",
+  "suspended",
+  "disabled"
+].each do |detail|
   abort "runbook missing required deployment detail: #{detail}" unless runbook.include?(detail)
 end
+abort "runbook contains incorrect cold-start latency" if runbook.include?("request can take about 15 minutes to become responsive")
 required.each do |key|
   abort "runbook missing required secret key: #{key}" unless runbook.include?(key)
 end
 
 readme = File.read(File.join(repo_root, "README.md"))
-["Agency Hub", "24-hour demo", "Render Free", "Aiven MySQL Free"].each do |detail|
+[
+  "Agency Hub",
+  "24-hour demo",
+  "Render Free",
+  "Aiven MySQL Free",
+  "PHP 8.4 runtime",
+  "cd api && php artisan test",
+  "https://github.com/Hugueninfer/agency-hub",
+  "demo uploads are blocked"
+].each do |detail|
   abort "README missing required deployment detail: #{detail}" unless readme.include?(detail)
 end
 RUBY

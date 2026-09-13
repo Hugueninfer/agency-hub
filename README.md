@@ -10,11 +10,11 @@ Agency Hub is a collaborative workspace for agencies to organize clients, projec
 
 ## 24-hour demo safety model
 
-The demo is intentionally temporary: its data expires after 24 hours. Do not use it for production records, sensitive material, or irreplaceable uploads. The demo may be unavailable while a free service cold-starts, and uploaded files are not durable.
+The demo is intentionally temporary: credentials stop working after 24 hours, and expired rows are deleted opportunistically rather than at a guaranteed instant. For this demo, demo uploads are blocked. Personal-account uploads are ephemeral, so do not use the demo for production records, sensitive material, or irreplaceable files. The demo may be unavailable while a free service cold-starts.
 
 ## Stack
 
-- Laravel 13 / PHP 8.3 API with Sanctum
+- Laravel 13 / **PHP 8.4 runtime** API with Sanctum (package compatibility requires PHP ^8.3)
 - React and Vite web client
 - MySQL 8 for relational application data
 - Docker and Docker Compose for repeatable local setup
@@ -38,7 +38,8 @@ docker compose stop
 ```bash
 bash scripts/test-validate-render-free.sh
 bash scripts/validate-render-free.sh
-docker compose exec app php artisan test
+cd api && composer install
+cd api && php artisan test
 cd web && npm test
 ```
 
@@ -52,4 +53,4 @@ Free services use shared capacity, can cold-start, and are not a production avai
 
 ## License and repository
 
-This project is distributed under the MIT license declared in [`api/composer.json`](api/composer.json). Repository source and issue history are available from this project's configured Git remote.
+This project is distributed under the MIT license declared in [`api/composer.json`](api/composer.json). Source is hosted at [github.com/Hugueninfer/agency-hub](https://github.com/Hugueninfer/agency-hub), with [issues](https://github.com/Hugueninfer/agency-hub/issues).

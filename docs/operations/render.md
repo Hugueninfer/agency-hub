@@ -8,7 +8,7 @@ Use **Render Free** for the one Docker web service in `render.yaml`; select the 
 
 Create an **Aiven MySQL Free** service, not a trial. Confirm its displayed plan is Free, that it has a **1 GB** database limit, and download its connection and TLS details. Hard stop: do not deploy if Render or Aiven presents only a trial or paid plan, asks for a payment method, or changes these no-cost terms. Obtain an approved replacement design first.
 
-The application is subject to Render Free shared usage and its 750-hour monthly allowance. Expect cold starts after inactivity; a request can take about **15 minutes** to become responsive in the worst case. The service is not an availability commitment. Aiven capacity is also limited by the 1 GB ceiling; monitor usage and delete disposable demo data before it reaches the limit.
+The application is subject to Render Free shared usage and its 750-hour monthly allowance. A Render Free service **spins down after 15 idle minutes**. After suspension, the expected **wakeup is about one minute**. The service is not an availability commitment. If the 750 hours or bandwidth allowance is exhausted, the service is suspended rather than billed; if build minutes are exhausted, new builds are disabled until the free allowance resets. With no payment method, no billable fallback is authorized. Aiven capacity is also limited by the 1 GB ceiling; monitor usage and delete disposable demo data before it reaches the limit.
 
 ## Before deployment
 
@@ -33,26 +33,21 @@ The application is subject to Render Free shared usage and its 750-hour monthly 
    | `DB_DATABASE` | Aiven database name |
    | `DB_USERNAME` | Aiven username |
    | `DB_PASSWORD` | Aiven password |
-   | `MYSQL_ATTR_SSL_CA` | Aiven CA certificate path available to the container |
+   | `MYSQL_ATTR_SSL_CA` | `/etc/secrets/aiven-ca.pem` |
 
-   TLS is required: keep `DB_CONNECTION=mysql` and configure `MYSQL_ATTR_SSL_CA` with Aiven's CA material. Do not disable certificate verification to work around a connection failure; correct the CA path or certificate instead. Set `APP_URL`, `ASSET_URL`, CORS origins, and Sanctum domains only after Render assigns the actual service hostname.
+   TLS is required. In Render, create a runtime secret file named `aiven-ca.pem` containing the downloaded Aiven CA certificate; Render mounts it at `/etc/secrets/aiven-ca.pem`. Set `MYSQL_ATTR_SSL_CA` exactly to `/etc/secrets/aiven-ca.pem`. This uses Render's runtime secret-file facility and needs no paid disk. Do not put certificate content in Git or disable certificate verification to work around a connection failure; correct the secret file instead. Set `APP_URL`, `ASSET_URL`, CORS origins, and Sanctum domains only after Render assigns the actual service hostname.
 
 ## First deploy and smoke test
 
 1. Deploy the Blueprint and wait through any cold start. A failure or timeout is a reason to inspect deployment logs and configuration, not to change plans.
-2. When the web service shell is available, run the initial migration once:
-
-   ```bash
-   php artisan migrate --force
-   ```
-
-   Do not run `migrate:fresh` against Aiven. It destroys data.
+2. Render Free has no web-service shell. On every startup, the image's `start.sh` automatically runs `php artisan migrate --force` before serving HTTP. Verify the deploy logs progress past migration to `[start] Setting PORT...`; a migration failure exits the container before it serves traffic. Do not run `migrate:fresh` against Aiven. It destroys data.
 3. Request `/api/health` over the assigned HTTPS origin and require HTTP 200. Then create one demo through the normal UI or API flow, confirm it can sign in, and verify the 24-hour cleanup behavior is understood. Do not publish credentials or a response body.
 4. Record the Render deploy ID, commit, migration state, and Aiven service identifier in the operator's secure change record. No public live-demo link or screenshot is authorized until separately verified.
 
 ## Limits, data handling, and operations
 
-- Demo workspaces expire after 24 hours. They are disposable, not backups.
+- Demo credentials stop working after 24 hours. Expired rows are physically deleted opportunistically, at most five per new demo creation, so deletion is not guaranteed at the exact expiry instant. They are disposable, not backups.
+- For demos, demo uploads are blocked; personal-account uploads are ephemeral and should not be treated as durable storage.
 - Render Free has shared capacity, the 750-hour limit, and cold starts. Do not use this setup for production availability, scheduled jobs, or timely cleanup guarantees.
 - Render's local filesystem is **ephemeral**. Personal uploads, logos, and attachments can disappear during a redeploy, restart, or replacement; tell users not to rely on them. Do not attach a paid persistent disk to preserve them under this contract.
 - Check the Aiven console for database size before import-heavy work. Keep below the 1 GB Free limit and remove expired demo data when necessary.
