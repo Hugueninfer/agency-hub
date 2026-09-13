@@ -10,6 +10,7 @@ service = services.first
 abort "service must be web" unless service["type"] == "web"
 abort "service must use free plan" unless service["plan"] == "free"
 abort "persistent disk is forbidden" if service.key?("disk")
+abort "max shutdown delay is unsupported on Render Free" if service.key?("maxShutdownDelaySeconds")
 required = %w[APP_KEY DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD AIVEN_CA_CERT]
 env_vars = service.fetch("envVars")
 required.each do |key|

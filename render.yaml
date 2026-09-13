@@ -9,7 +9,6 @@ services:
     dockerContext: .
     autoDeployTrigger: "off"
     healthCheckPath: /api/health
-    maxShutdownDelaySeconds: 100
     envVars:
       - fromGroup: agency-hub-runtime
       # Render generation cannot add Laravel's required base64: prefix.

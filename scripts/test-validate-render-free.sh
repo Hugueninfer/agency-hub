@@ -49,8 +49,21 @@ assert_rejected() {
 reset_fixture
 run_validator
 
-sed -i '/- key: AIVEN_CA_CERT/{n;s/sync: false/sync: false\n        value: hard-coded/;}' "$test_dir/render.yaml"
+reset_fixture
+sed -i '/maxShutdownDelaySeconds:/d; /healthCheckPath:/a\    maxShutdownDelaySeconds: 100' "$test_dir/render.yaml"
 output_file="$test_dir/validator-output"
+set +e
+run_validator >"$output_file" 2>&1
+validator_status=$?
+set -e
+if [ "$validator_status" -eq 0 ]; then
+  echo "validator accepted maxShutdownDelaySeconds on a free service" >&2
+  exit 1
+fi
+grep -Fqx "max shutdown delay is unsupported on Render Free" "$output_file"
+
+reset_fixture
+sed -i '/- key: AIVEN_CA_CERT/{n;s/sync: false/sync: false\n        value: hard-coded/;}' "$test_dir/render.yaml"
 set +e
 run_validator >"$output_file" 2>&1
 validator_status=$?
