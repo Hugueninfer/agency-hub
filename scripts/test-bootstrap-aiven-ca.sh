@@ -23,6 +23,13 @@ docker run --rm --user root --volume "$test_dir:/workspace:ro" --entrypoint sh "
   su -s /bin/sh www-data -c "openssl x509 -in /workspace/aiven-ca.pem -noout"
 '
 
+rm -f "$test_dir/aiven-ca.pem"
+AIVEN_CA_CERT="base64:$(printf '%s' "$certificate" | base64 | tr -d '\n')" run_bootstrap
+docker run --rm --user root --volume "$test_dir:/workspace:ro" --entrypoint sh "$image" -c '
+  test "$(stat -c %U:%G:%a /workspace/aiven-ca.pem)" = "www-data:www-data:640"
+  su -s /bin/sh www-data -c "openssl x509 -in /workspace/aiven-ca.pem -noout"
+'
+
 assert_rejected() {
   local certificate_value=$1
   local output_file="$test_dir/output"
