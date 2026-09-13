@@ -21,6 +21,24 @@ class DemoFixtureServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_seed_uses_a_bounded_number_of_database_round_trips(): void
+    {
+        [$tenant, $owner] = $this->workspace('bounded');
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            app(DemoFixtureService::class)->seed($tenant, $owner, CarbonImmutable::parse('2026-09-06T12:00:00Z'));
+            $queryCount = count(DB::getQueryLog());
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertSame(3, DB::table('users')->where('tenant_id', $tenant->id)->count());
+        $this->assertSame(8, DB::table('tasks')->where('tenant_id', $tenant->id)->count());
+        $this->assertLessThanOrEqual(40, $queryCount, "Demo seeding executed {$queryCount} SQL statements.");
+    }
+
     public function test_fixture_is_complete_isolated_rebased_and_does_not_mutate_its_source(): void
     {
         $service = app(DemoFixtureService::class);
@@ -110,9 +128,11 @@ class DemoFixtureServiceTest extends TestCase
     public function test_midway_failure_rolls_back_the_whole_graph(): void
     {
         [$tenant, $owner] = $this->workspace('rollback');
-        $projectsCreated = 0;
-        Project::creating(function () use (&$projectsCreated): void {
-            if (++$projectsCreated === 2) {
+        $failProjectInsert = true;
+        DB::listen(function ($query) use (&$failProjectInsert): void {
+            $sql = strtolower($query->sql);
+            if ($failProjectInsert && str_contains($sql, 'insert into') && str_contains($sql, 'projects')) {
+                $failProjectInsert = false;
                 throw new RuntimeException('forced fixture failure');
             }
         });
@@ -121,8 +141,6 @@ class DemoFixtureServiceTest extends TestCase
             $this->fail('Expected the injected fixture failure.');
         } catch (RuntimeException $exception) {
             $this->assertSame('forced fixture failure', $exception->getMessage());
-        } finally {
-            Project::flushEventListeners();
         }
         $this->assertSame('rollback', $tenant->fresh()->name);
         $this->assertSame('Original owner', $owner->fresh()->name);

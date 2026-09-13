@@ -2,24 +2,13 @@
 
 namespace App\Domain\Services;
 
-use App\Models\Board;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\MenuItem;
-use App\Models\Notification;
-use App\Models\NotificationPreference;
-use App\Models\Permission;
-use App\Models\Project;
-use App\Models\Role;
 use App\Models\Task;
-use App\Models\TaskComment;
-use App\Models\TaskSubtask;
 use App\Models\Tenant;
-use App\Models\TimeEntry;
 use App\Models\User;
 use App\Support\Notifications\NotificationType;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
@@ -50,111 +39,195 @@ class DemoFixtureService
             }
             $uuids['users.alex'] = $owner->uuid;
             $attributes = fn (string $key): array => ['uuid' => $uuids[$key], 'tenant_id' => $destination->id, 'created_at' => $now, 'updated_at' => $now];
+            $idsFor = function (string $table, string $group) use ($fixture, $uuids): array {
+                $keysByUuid = [];
+                foreach (array_keys($fixture[$group]) as $key) {
+                    $keysByUuid[$uuids[$group.'.'.$key]] = $key;
+                }
+                $idsByUuid = DB::table($table)->whereIn('uuid', array_keys($keysByUuid))->pluck('id', 'uuid');
+                $ids = [];
+                foreach ($keysByUuid as $uuid => $key) {
+                    $id = $idsByUuid->get($uuid);
+                    if ($id === null) {
+                        throw new RuntimeException("Missing {$group} fixture row {$key} after batch insert.");
+                    }
+                    $ids[$key] = (int) $id;
+                }
 
-            $permissions = [];
+                return $ids;
+            };
+
+            // Permission definitions are a global catalog. Ignore existing codes just
+            // like firstOrCreate did, but create every missing definition in one trip.
+            $permissionRows = [];
             foreach ($fixture['permissions'] as $code => $name) {
-                // Permission definitions are global catalog rows, never tenant data.
-                $permissions[$code] = Permission::firstOrCreate(['code' => $code], ['name' => $name])->id;
+                $permissionRows[] = ['code' => $code, 'name' => $name, 'description' => null, 'created_at' => $now, 'updated_at' => $now];
             }
-            $roles = [];
+            DB::table('permissions')->insertOrIgnore($permissionRows);
+            $permissions = DB::table('permissions')->whereIn('code', array_keys($fixture['permissions']))->pluck('id', 'code')->map(fn ($id) => (int) $id)->all();
+
+            $roleRows = [];
             foreach ($fixture['roles'] as $key => $data) {
-                $role = Role::forceCreate($attributes('roles.'.$key) + ['name' => $key, 'description' => $data['description']]);
-                $codes = $data['permissions'] === '*' ? array_keys($permissions) : $data['permissions'];
-                $role->permissions()->sync(array_map(fn ($code) => $permissions[$code], $codes));
-                $roles[$key] = $role;
+                $roleRows[] = $attributes('roles.'.$key) + ['name' => $key, 'description' => $data['description']];
             }
-            $users = [];
+            DB::table('roles')->insert($roleRows);
+            $roles = $idsFor('roles', 'roles');
+            $permissionRoleRows = [];
+            foreach ($fixture['roles'] as $key => $data) {
+                $codes = $data['permissions'] === '*' ? array_keys($permissions) : $data['permissions'];
+                foreach ($codes as $code) {
+                    $permissionRoleRows[] = ['role_id' => $roles[$key], 'permission_id' => $permissions[$code]];
+                }
+            }
+            DB::table('permission_role')->insert($permissionRoleRows);
+
+            $userRows = [];
             foreach ($fixture['users'] as $key => $data) {
                 [$local, $domain] = explode('@', $data['email']);
                 $profile = ['name' => $data['name'], 'email' => $local.'+'.$destination->uuid.'@'.$domain];
                 if ($key === 'alex') {
-                    $owner->update($profile);
-                    $user = $owner;
-                } else {
-                    $user = User::forceCreate($attributes('users.'.$key) + $profile + ['password' => Str::random(64)]);
+                    DB::table('users')->where('id', $owner->id)->update($profile + ['updated_at' => $now]);
+                    continue;
                 }
-                $user->roles()->sync([$roles[$data['role']]->id]);
-                $users[$key] = $user;
+                $userRows[] = $attributes('users.'.$key) + $profile + [
+                    'password' => Hash::make(Str::random(64)),
+                    'email_verified_at' => null,
+                    'remember_token' => null,
+                    'photo_path' => null,
+                ];
             }
-            $projects = [];
+            DB::table('users')->insert($userRows);
+            $users = $idsFor('users', 'users');
+            $roleUserRows = [];
+            foreach ($fixture['users'] as $key => $data) {
+                $roleUserRows[] = ['role_id' => $roles[$data['role']], 'user_id' => $users[$key]];
+            }
+            DB::table('role_user')->insert($roleUserRows);
+
+            $projectRows = [];
             foreach ($fixture['projects'] as $key => $data) {
-                $projects[$key] = Project::forceCreate($attributes('projects.'.$key) + $data);
+                $projectRows[] = $attributes('projects.'.$key) + $data;
             }
+            DB::table('projects')->insert($projectRows);
+            $projects = $idsFor('projects', 'projects');
+
             $columns = ['todo' => Task::BOARD_TODO, 'development' => Task::BOARD_IN_PROGRESS, 'pending' => Task::BOARD_PENDENCY, 'done' => Task::BOARD_DONE];
-            $tasks = [];
+            $taskRows = [];
+            $position = 0;
             foreach ($fixture['tasks'] as $key => $data) {
-                $task = Task::forceCreate($attributes('tasks.'.$key) + [
-                    'project_id' => $projects[$data['project']]->id, 'created_by' => $owner->id,
+                $taskRows[] = $attributes('tasks.'.$key) + [
+                    'project_id' => $projects[$data['project']], 'created_by' => $owner->id,
                     'title' => $data['title'], 'description' => $data['description'],
-                    'board_column' => $columns[$data['status']], 'position' => count($tasks),
-                    'due_date' => $now->addDays($data['due_days'])->toDateString(), 'source' => Task::SOURCE_MANUAL,
-                ]);
-                $task->assignees()->sync(array_map(fn ($key) => $users[$key]->id, $data['assignees']));
-                $tasks[$key] = $task;
+                    'board_column' => $columns[$data['status']], 'position' => $position,
+                    'due_date' => $now->addDays($data['due_days'])->toDateString(),
+                    'source' => Task::SOURCE_MANUAL, 'source_metadata' => null,
+                ];
+                $position++;
             }
+            DB::table('tasks')->insert($taskRows);
+            $tasks = $idsFor('tasks', 'tasks');
+            $taskUserRows = [];
+            foreach ($fixture['tasks'] as $key => $data) {
+                foreach ($data['assignees'] as $assignee) {
+                    $taskUserRows[] = ['task_id' => $tasks[$key], 'user_id' => $users[$assignee], 'created_at' => $now, 'updated_at' => $now];
+                }
+            }
+            DB::table('task_user')->insert($taskUserRows);
+
+            $subtaskRows = [];
             foreach (array_values($fixture['checklist']['items']) as $position => $item) {
-                TaskSubtask::forceCreate([
-                    'uuid' => (string) Str::uuid(), 'task_id' => $tasks[$fixture['checklist']['task']]->id,
+                $subtaskRows[] = [
+                    'uuid' => (string) Str::uuid(), 'task_id' => $tasks[$fixture['checklist']['task']],
                     'title' => $item['title'], 'is_done' => $item['is_done'], 'position' => $position,
-                    'assignee_id' => $users[$item['assignee']]->id, 'created_at' => $now, 'updated_at' => $now,
-                ]);
+                    'assignee_id' => $users[$item['assignee']], 'created_at' => $now, 'updated_at' => $now,
+                ];
             }
+            DB::table('task_subtasks')->insert($subtaskRows);
+
+            $commentRows = [];
             foreach ($fixture['comments'] as $key => $data) {
-                TaskComment::forceCreate([
-                    'uuid' => $uuids['comments.'.$key], 'task_id' => $tasks[$data['task']]->id,
-                    'user_id' => $users[$data['user']]->id, 'body' => $data['body'],
+                $commentRows[] = [
+                    'uuid' => $uuids['comments.'.$key], 'task_id' => $tasks[$data['task']],
+                    'user_id' => $users[$data['user']], 'body' => $data['body'],
                     'created_at' => $now->subDays($data['days_ago']), 'updated_at' => $now->subDays($data['days_ago']),
-                ]);
+                ];
             }
+            DB::table('task_comments')->insert($commentRows);
+
+            $timeEntryRows = [];
             foreach ($fixture['time_entries'] as $key => $data) {
                 $date = $data['week'] === -1 ? $now->startOfWeek()->subWeek()->addDays(4) : $now->startOfWeek()->addDays(min(4, $now->dayOfWeekIso - 1));
-                TimeEntry::forceCreate($attributes('time_entries.'.$key) + [
-                    'task_id' => $tasks[$data['task']]->id, 'project_id' => $tasks[$data['task']]->project_id,
-                    'user_id' => $users[$data['user']]->id, 'source' => TimeEntry::SOURCE_MANUAL,
+                $timeEntryRows[] = $attributes('time_entries.'.$key) + [
+                    'task_id' => $tasks[$data['task']], 'project_id' => $projects[$fixture['tasks'][$data['task']]['project']],
+                    'user_id' => $users[$data['user']], 'source' => 'manual',
+                    'started_at' => null, 'ended_at' => null,
                     'worked_date' => $date->toDateString(), 'duration_minutes' => $data['minutes'],
-                ]);
+                ];
             }
+            DB::table('time_entries')->insert($timeEntryRows);
+
+            $invoiceRows = [];
             foreach ($fixture['invoices'] as $key => $data) {
                 $total = array_sum(array_map(fn ($item) => $item['quantity'] * $item['unit_price'], $data['items']));
-                $invoice = Invoice::forceCreate($attributes('invoices.'.$key) + [
+                $invoiceRows[] = $attributes('invoices.'.$key) + [
                     'invoice_number' => $data['invoice_number'], 'status' => $data['status'],
                     'issue_date' => $now->addDays($data['issue_days'])->toDateString(), 'due_date' => $now->addDays($data['due_days'])->toDateString(),
                     'currency' => 'USD', 'seller_name' => $fixture['tenant']['name'], 'seller_email' => $fixture['tenant']['email'],
+                    'seller_vat_id' => null, 'seller_address' => null,
                     'buyer_name' => $data['buyer_name'], 'buyer_email' => $data['buyer_email'], 'notes' => $data['notes'],
+                    'buyer_vat_id' => null, 'buyer_address' => null,
                     'subtotal_amount' => $total, 'tax_amount' => 0, 'total_amount' => $total,
                     'sent_at' => $data['status'] === 'draft' ? null : $now->addDays($data['issue_days']),
                     'created_by' => $owner->id, 'updated_by' => $owner->id,
-                ]);
+                ];
+            }
+            DB::table('invoices')->insert($invoiceRows);
+            $invoices = $idsFor('invoices', 'invoices');
+            $invoiceItemRows = [];
+            foreach ($fixture['invoices'] as $key => $data) {
                 foreach (array_values($data['items']) as $position => $item) {
-                    InvoiceItem::forceCreate($item + [
-                        'uuid' => (string) Str::uuid(), 'tenant_id' => $destination->id, 'invoice_id' => $invoice->id,
+                    $invoiceItemRows[] = $item + [
+                        'uuid' => (string) Str::uuid(), 'tenant_id' => $destination->id, 'invoice_id' => $invoices[$key],
                         'position' => $position, 'tax_percent' => 0, 'line_total' => $item['quantity'] * $item['unit_price'],
                         'created_at' => $now, 'updated_at' => $now,
-                    ]);
+                    ];
                 }
             }
+            DB::table('invoice_items')->insert($invoiceItemRows);
+
+            $boardRows = [];
             foreach ($fixture['boards'] as $key => $data) {
-                Board::forceCreate($attributes('boards.'.$key) + [
-                    'name' => $data['name'], 'created_by' => $users[$data['author']]->id, 'updated_by' => $users[$data['author']]->id,
-                    'excalidraw_data' => $this->scene($data['excalidraw_data'], $now),
-                ]);
+                $boardRows[] = $attributes('boards.'.$key) + [
+                    'name' => $data['name'], 'created_by' => $users[$data['author']], 'updated_by' => $users[$data['author']],
+                    'excalidraw_data' => json_encode($this->scene($data['excalidraw_data'], $now), JSON_THROW_ON_ERROR),
+                ];
             }
+            DB::table('boards')->insert($boardRows);
+
+            $notificationRows = [];
             foreach ($fixture['notifications'] as $key => $data) {
-                Notification::forceCreate($attributes('notifications.'.$key) + [
-                    'notifiable_id' => $users[$data['user']]->id, 'actor_uuid' => $users[$data['actor']]->uuid,
+                $notificationRows[] = $attributes('notifications.'.$key) + [
+                    'notifiable_id' => $users[$data['user']], 'actor_uuid' => $uuids['users.'.$data['actor']],
                     'type' => $data['type'], 'title' => $data['title'], 'body' => $data['body'],
                     'action_url' => '/tasks', 'action_text' => 'View tasks',
                     'read_at' => $data['read'] ? $now->subHour() : null,
-                ]);
+                ];
             }
-            foreach ($users as $user) {
+            DB::table('notifications')->insert($notificationRows);
+
+            $preferenceRows = [];
+            foreach ($users as $userId) {
                 foreach (NotificationType::all() as $type) {
-                    NotificationPreference::forceCreate($fixture['preferences'] + ['tenant_id' => $destination->id, 'user_id' => $user->id, 'type' => $type, 'created_at' => $now, 'updated_at' => $now]);
+                    $preferenceRows[] = $fixture['preferences'] + ['tenant_id' => $destination->id, 'user_id' => $userId, 'type' => $type, 'created_at' => $now, 'updated_at' => $now];
                 }
             }
+            DB::table('notification_preferences')->insert($preferenceRows);
+
+            $menuRows = [];
             foreach ($fixture['menu'] as $key => $data) {
-                MenuItem::forceCreate($attributes('menu.'.$key) + $data + ['is_active' => true]);
+                $menuRows[] = $attributes('menu.'.$key) + $data + ['parent_id' => null, 'url' => null, 'is_active' => true];
             }
+            DB::table('menu_items')->insert($menuRows);
         });
     }
 
