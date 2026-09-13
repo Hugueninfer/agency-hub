@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateWorkspace;
+use App\Http\Middleware\BlockDemoUploads;
 use App\Http\Middleware\EnforceDemoWriteBudget;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureUserHasPermission;
@@ -23,10 +24,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(null);
 
         $middleware->statefulApi();
+        $middleware->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_HOST
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
 
         $middleware->alias([
             'workspace.auth' => AuthenticateWorkspace::class,
             'tenant' => EnsureTenantContext::class,
+            'demo.uploads' => BlockDemoUploads::class,
             'demo.budget' => EnforceDemoWriteBudget::class,
             'permission' => EnsureUserHasPermission::class,
         ]);

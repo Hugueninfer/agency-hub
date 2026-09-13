@@ -110,7 +110,8 @@ class DemoAuthenticationTest extends TestCase
         $this->assertDatabaseCount('demo_tokens', 1);
         DemoToken::findOrFail(hash('sha256', $plain))->tenant->update(['expires_at' => now()->subSecond()]);
         $this->postJson('/api/v1/auth/demo')->assertCreated();
-        $this->assertSame(2, Tenant::where('kind', 'demo')->count());
+        $this->assertSame(1, Tenant::where('kind', 'demo')->count());
+        $this->assertDatabaseMissing('demo_tokens', ['digest' => hash('sha256', $plain)]);
     }
 
     public function test_failed_fixture_rolls_back_the_entire_demo_creation(): void

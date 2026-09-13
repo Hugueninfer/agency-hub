@@ -129,8 +129,8 @@ $results = parallelWorkers('create', 4);
 check(count(array_filter($results, fn ($result) => $result === 'created')) === 1, 'Only one expired slot may be reused.');
 check(count(array_filter($results, fn ($result) => $result === 'capacity')) === 3, 'Three creates must be refused after slot reuse.');
 check(Tenant::where('kind', 'demo')->where('expires_at', '>', now())->count() === 3, 'Active capacity exceeded.');
-check(Tenant::whereKey($expired->id)->exists(), 'Creation must not delete expired data.');
-echo "PASS expired capacity: 4 processes, 1 created, 3 refused, expired tenant retained.\n";
+check(! Tenant::whereKey($expired->id)->exists(), 'Creation must opportunistically delete the expired tenant.');
+echo "PASS expired capacity: 4 processes, 1 created, 3 refused, expired tenant cleaned.\n";
 
 $active = Tenant::where('kind', 'demo')->where('expires_at', '>', now())->firstOrFail();
 Tenant::where('kind', 'demo')->whereKeyNot($active->id)->update(['expires_at' => now()->subMinute()]);
@@ -167,7 +167,7 @@ foreach ($results as $result) {
         check(str_contains($result, 'Cleanup already running; deleted 0'), 'Unexpected cleanup output: '.$result);
     }
 }
-check($deleted === 3, 'Concurrent cleanup must delete exactly three expired tenants.');
+check($deleted === 2, 'Concurrent cleanup must delete exactly two remaining expired tenants.');
 foreach (tenantRows($expiredIds) as $table => $rows) {
     check($rows === [], 'Expired tenant rows remain in '.$table);
 }
@@ -176,4 +176,4 @@ foreach (['task_comments' => ['task_id', $taskIds], 'task_subtasks' => ['task_id
 }
 check(tenantRows($preservedIds) === $preserved, 'Active demo or personal tenants changed.');
 check(Artisan::call('demo:cleanup') === 0 && str_contains(Artisan::output(), 'Deleted 0'), 'Cleanup is not idempotent.');
-echo "PASS concurrent cleanup: 2 processes deleted 3 tenants exactly once; graph removed, active/personal preserved; repeat deleted 0.\n";
+echo "PASS concurrent cleanup: 2 processes deleted 2 tenants exactly once; graph removed, active/personal preserved; repeat deleted 0.\n";

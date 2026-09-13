@@ -90,6 +90,8 @@ envVarGroups:
         value: "false"
       - key: APP_MODE
         value: combined
+      - key: TRUSTED_PROXIES
+        value: "*"
       - key: APP_URL
         value: https://agency-hub.onrender.com
       - key: ASSET_URL

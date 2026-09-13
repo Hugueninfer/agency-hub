@@ -27,6 +27,28 @@ scaling; plan for downtime during deployment or maintenance. Cron cannot mount
 either disk and performs database-only demo cleanup. It shares the database
 cache store so the cleanup lock coordinates with web invocations.
 
+Demo creation also removes at most five expired workspaces before acquiring the
+capacity lock. It skips this batch if another cleanup owns the lock; hourly cron
+remains enabled for idle periods and larger backlogs. Demo uploads (user photos,
+task attachments, and workspace logos) return 403 before storage writes, including
+when the write budget is exhausted. Fixtures contain no physical upload references.
+The uploads disk and its backups serve personal accounts only.
+
+`TRUSTED_PROXIES` is empty by default, so direct/local requests do not trust
+forwarded headers. Render's environment group explicitly sets `*`; fixed ingress
+addresses can instead be supplied as comma-separated IPs/CIDRs. Laravel then uses
+`X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Port`, and `X-Forwarded-For`
+for generated HTTPS URLs and per-client rate limits. Rebuild the runtime config
+cache/redeploy after changing this variable.
+
+The wildcard trusts every sender of these headers. It is appropriate only when
+all traffic reaches the app through a controlled ingress that supplies or sanitizes
+them and prevents direct untrusted access. Local tests prove application behavior
+with and without trust; they do not prove Render's header sanitization. Before
+release, verify the actual public origin, forwarded client IPs and spoof handling
+through the deployed ingress. If that boundary cannot be established, restrict
+trusted proxy addresses and ingress access before enabling the public demo.
+
 The `.env.render.example` file documents the environment contract; its blank
 values are intentional. Never commit real environment files or credentials.
 Build context excludes nested environment files and cached application config.

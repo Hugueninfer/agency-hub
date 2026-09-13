@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import { clearDemoSession } from "../lib/demoSession";
 
 const PREFIX = "/api/v1/auth";
 
@@ -15,6 +16,7 @@ export async function fetchCsrfCookie() {
  * @returns {Promise<{ user: object }>}
  */
 export async function login({ email, password }) {
+  clearDemoSession();
   await fetchCsrfCookie();
   const { data } = await apiRequest(`${PREFIX}/login`, {
     method: "POST",

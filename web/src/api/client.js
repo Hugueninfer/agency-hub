@@ -3,7 +3,7 @@
  * Envelope: { success, message, data?, errors? }
  */
 
-import { clearDemoSession, hasStoredDemoSession, loadDemoSession } from "../lib/demoSession";
+import { expireDemoSession, hasStoredDemoSession, loadDemoSession } from "../lib/demoSession";
 
 export class ApiError extends Error {
   constructor(message, { status, body, errors } = {}) {
@@ -162,8 +162,8 @@ export async function apiRequest(path, options = {}) {
   const treatAsAuthenticatedCall = !skipAuthEvent;
 
   const currentDemo = res.status === 401 && wasDemo ? loadDemoSession() : null;
-  const matchesDemo = wasDemo && (!currentDemo || requestToken === `Bearer ${currentDemo.accessToken}`);
-  if (res.status === 401 && matchesDemo) clearDemoSession();
+  const matchesDemo = wasDemo && hasStoredDemoSession() && (!currentDemo || requestToken === `Bearer ${currentDemo.accessToken}`);
+  if (res.status === 401 && matchesDemo) expireDemoSession();
 
   if (
     res.status === 401 &&

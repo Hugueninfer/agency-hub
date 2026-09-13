@@ -139,6 +139,8 @@ class DemoLifecycleTest extends TestCase
         try {
             $this->artisan('demo:cleanup')->assertSuccessful();
             $this->assertDatabaseHas('tenants', ['id' => $expired->id]);
+            app(DemoSessionService::class)->create();
+            $this->assertDatabaseHas('tenants', ['id' => $expired->id]);
         } finally {
             if ($connection !== null) {
                 $connection->selectOne("SELECT RELEASE_LOCK('agency-hub-demo-cleanup')");
@@ -149,6 +151,22 @@ class DemoLifecycleTest extends TestCase
         }
         $this->artisan('demo:cleanup')->assertSuccessful();
         $this->assertDatabaseMissing('tenants', ['id' => $expired->id]);
+    }
+
+    public function test_creation_cleans_only_a_bounded_batch_of_expired_demos(): void
+    {
+        $expired = [];
+        for ($i = 0; $i < 7; $i++) {
+            $expired[] = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->subHours(8 - $i)])->id;
+        }
+        $personal = $this->createTenant(['expires_at' => now()->subDay()]);
+        $active = $this->createTenant(['kind' => 'demo', 'expires_at' => now()->addHour()]);
+
+        app(DemoSessionService::class)->create();
+
+        $this->assertSame(array_slice($expired, 5), Tenant::whereIn('id', $expired)->orderBy('id')->pluck('id')->all());
+        $this->assertDatabaseHas('tenants', ['id' => $personal->id]);
+        $this->assertDatabaseHas('tenants', ['id' => $active->id]);
     }
 
     public function test_tenant_kind_defines_demo_status_and_lifecycle_casts(): void

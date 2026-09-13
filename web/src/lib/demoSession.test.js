@@ -32,36 +32,38 @@ describe("demo session storage", () => {
     expect(hasDemoIntent()).toBe(true);
   });
 
-  it("removes malformed stored session data", () => {
+  it("removes malformed credentials while preserving demo intent", () => {
     sessionStorage.setItem(STORAGE_KEY, "not-json");
 
     expect(loadDemoSession()).toBeNull();
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(hasDemoIntent()).toBe(true);
+    expect(sessionStorage.getItem(STORAGE_KEY)).not.toContain("not-json");
   });
 
-  it("removes sessions expired at the current time", () => {
+  it("removes expired credentials while preserving demo intent", () => {
     sessionStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ accessToken: "secret", expiresAt: "2026-09-06T00:00:00Z" }),
     );
 
     expect(loadDemoSession()).toBeNull();
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(hasDemoIntent()).toBe(true);
+    expect(sessionStorage.getItem(STORAGE_KEY)).not.toContain("secret");
   });
 
   it("rejects missing strings and invalid expiration dates", () => {
     saveDemoSession({ accessToken: "", expiresAt: VALID_SESSION.expiresAt });
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(loadDemoSession()).toBeNull();
 
     saveDemoSession({ accessToken: "secret", expiresAt: "not-a-date" });
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(loadDemoSession()).toBeNull();
 
     sessionStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ accessToken: "secret", expiresAt: "not-a-date" }),
     );
     expect(loadDemoSession()).toBeNull();
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(hasDemoIntent()).toBe(true);
   });
 
   it("clears the active demo session explicitly", () => {

@@ -13,12 +13,18 @@ use Illuminate\Support\Str;
 /** Lifecycle orchestration follows the TenantService persistence convention. */
 class DemoSessionService
 {
-    public function __construct(private readonly DemoFixtureService $fixtures) {}
+    public function __construct(
+        private readonly DemoFixtureService $fixtures,
+        private readonly DemoCleanupService $cleanup,
+    ) {}
 
     /** @return array{token: string, expires_at: CarbonImmutable} */
     public function create(): array
     {
         abort_if(config('app.mode') === 'personal', 404);
+        // Small independent transactions, before taking the capacity lock.
+        // A busy cleanup lock simply leaves this work for a later request/cron.
+        $this->cleanup->cleanup(5);
 
         return DB::transaction(function (): array {
             // A stable singleton serializes the empty-table case too. A write

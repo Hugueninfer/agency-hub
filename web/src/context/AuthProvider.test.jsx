@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import AuthProvider from "./AuthProvider";
 import { useAuth } from "../hooks/useAuth";
-import { loadDemoSession, saveDemoSession } from "../lib/demoSession";
+import { hasDemoIntent, loadDemoSession, saveDemoSession } from "../lib/demoSession";
 import DemoBanner from "../components/DemoBanner";
 import DemoResetCard from "../components/settings/DemoResetCard";
 import { apiRequest } from "../api/client";
@@ -119,6 +119,61 @@ it("an expired demo request never falls back to personal cookies before the expi
   expect(requests).toHaveLength(1);
   expect(auth.identityKind).toBeNull();
   expect(screen.getByRole("status")).toHaveTextContent(/expirou/i);
+  await act(async () => {
+    for (let i = 0; i < 3; i++) await expect(apiRequest("/api/v1/projects")).rejects.toMatchObject({ status: 401 });
+    const results = await Promise.allSettled([apiRequest("/api/v1/tasks"), apiRequest("/api/v1/boards"), apiRequest("/api/v1/invoices")]);
+    expect(results.every((result) => result.status === "rejected" && result.reason.status === 401)).toBe(true);
+  });
+  expect(requests).toHaveLength(1);
+  expect(hasDemoIntent()).toBe(true);
+});
+
+it("preserves server-expired intent through concurrent responses and reload until personal login", async () => {
+  saveDemoSession({ accessToken: "demo-secret", expiresAt: demo.expires_at }); me = demo;
+  const view = setup(); await waitFor(() => expect(auth.identityKind).toBe("demo"));
+  const finishes = [];
+  fetch.mockImplementationOnce(() => new Promise((resolve) => finishes.push(resolve)))
+    .mockImplementationOnce(() => new Promise((resolve) => finishes.push(resolve)));
+  await act(async () => {
+    const pending = Promise.allSettled([apiRequest("/api/v1/projects"), apiRequest("/api/v1/boards")]);
+    finishes.forEach((finish) => finish(json(null, 401)));
+    expect((await pending).every((result) => result.status === "rejected")).toBe(true);
+  });
+  expect(loadDemoSession()).toBeNull();
+  expect(hasDemoIntent()).toBe(true);
+  view.unmount(); me = personal; setup();
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/expirou/i));
+  const calls = fetch.mock.calls.length;
+  await expect(apiRequest("/api/v1/projects")).rejects.toMatchObject({ status: 401 });
+  expect(fetch).toHaveBeenCalledTimes(calls);
+  await act(async () => { await auth.login("real@example.com", "password"); });
+  expect(hasDemoIntent()).toBe(false);
+  await apiRequest("/api/v1/projects");
+  expect(requests.at(-1).options.credentials).toBe("include");
+});
+
+it("explicit logout clears expired intent even when no active identity remains", async () => {
+  sessionStorage.setItem("agency-hub.demo", JSON.stringify({ accessToken: "expired", expiresAt: "2000-01-01T00:00:00Z" }));
+  setup(); await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/expirou/i));
+  expect(hasDemoIntent()).toBe(true);
+  await act(async () => { await auth.logout(); });
+  expect(hasDemoIntent()).toBe(false);
+  expect(requests).toHaveLength(0);
+});
+
+it("late demo failures cannot restore intent after an explicit logout or personal login", async () => {
+  saveDemoSession({ accessToken: "demo-secret", expiresAt: demo.expires_at }); me = demo;
+  setup(); await waitFor(() => expect(auth.identityKind).toBe("demo"));
+  let finish;
+  fetch.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const pending = apiRequest("/api/v1/projects");
+  await act(async () => { await auth.logout(); });
+  finish(json(null, 401));
+  await expect(pending).rejects.toMatchObject({ status: 401 });
+  expect(hasDemoIntent()).toBe(false);
+  await act(async () => { await auth.login("real@example.com", "password"); });
+  expect(auth.identityKind).toBe("personal");
+  expect(hasDemoIntent()).toBe(false);
 });
 
 it("a captured logout token cannot be replaced by a newer demo session", async () => {

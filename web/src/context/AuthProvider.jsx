@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RBAC_NAV_PERMISSIONS } from "../constants/rbacPermissions";
 import { clearPersistedAuth, loadPersistedAuth, persistAuth, SESSION_IDLE_MS, touchAuthSession, updatePersistedUser } from "../lib/authSession";
-import { clearDemoSession, hasStoredDemoSession, loadDemoSession, saveDemoSession } from "../lib/demoSession";
+import { clearDemoSession, expireDemoSession, hasStoredDemoSession, loadDemoSession, saveDemoSession } from "../lib/demoSession";
 import * as authApi from "../api/auth";
 import { AuthContext } from "./auth-context";
 
@@ -30,7 +30,7 @@ export default function AuthProvider({ children }) {
   const clearLocal = useCallback(() => {
     generation.current++;
     identity.current = { kind: null, token: null };
-    clearDemoSession();
+    if (hasStoredDemoSession()) expireDemoSession();
     clearPersistedAuth();
     setUser(null);
     setIdentityKind(null);
@@ -77,6 +77,7 @@ export default function AuthProvider({ children }) {
 
   const logout = useCallback(async (options) => {
     const snapshot = identity.current;
+    clearDemoSession();
     endSession();
     if (options?.skipRemote) return;
     try {
@@ -119,6 +120,7 @@ export default function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     if (pending.current) throw new Error("Aguarde a operação em andamento.");
     pending.current = true;
+    clearDemoSession();
     clearLocal();
     const revision = generation.current;
     try {
@@ -132,6 +134,7 @@ export default function AuthProvider({ children }) {
   const startDemo = useCallback(async () => {
     if (pending.current) throw new Error("Aguarde a operação em andamento.");
     pending.current = true;
+    expireDemoSession();
     clearLocal();
     const revision = generation.current;
     try {

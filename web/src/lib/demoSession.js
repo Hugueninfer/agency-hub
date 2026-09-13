@@ -33,7 +33,7 @@ export function loadDemoSession() {
 
     const session = JSON.parse(raw);
     if (!isValidDemoSession(session)) {
-      storage.removeItem(STORAGE_KEY);
+      expireDemoSession();
       return null;
     }
 
@@ -43,7 +43,7 @@ export function loadDemoSession() {
     };
   } catch {
     try {
-      storage.removeItem(STORAGE_KEY);
+      expireDemoSession();
     } catch {
       // Storage can be unavailable in privacy-restricted browser contexts.
     }
@@ -54,7 +54,7 @@ export function loadDemoSession() {
 export function saveDemoSession(session) {
   const storage = getSessionStorage();
   if (!storage || !isValidDemoSession(session)) {
-    clearDemoSession();
+    expireDemoSession();
     return false;
   }
 
@@ -84,10 +84,19 @@ export function clearDemoSession() {
 }
 
 export function hasDemoIntent() {
-  return loadDemoSession() !== null;
+  return hasStoredDemoSession();
 }
 
-/** Check before loading so expired intent cannot fall back to a personal cookie. */
+/** Remove credentials but keep explicit demo intent until login or logout. */
+export function expireDemoSession() {
+  try {
+    getSessionStorage()?.setItem(STORAGE_KEY, JSON.stringify({ expired: true }));
+  } catch {
+    // Storage can be unavailable in privacy-restricted browser contexts.
+  }
+}
+
+/** Includes expired intent so later requests cannot fall back to cookies. */
 export function hasStoredDemoSession() {
   try {
     return getSessionStorage()?.getItem(STORAGE_KEY) != null;
