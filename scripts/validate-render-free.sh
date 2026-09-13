@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ruby_check=$(cat <<'RUBY'
+repo_root = ARGV.fetch(0)
 doc = YAML.safe_load_file("render.yaml", aliases: true)
 services = doc.fetch("services")
 abort "expected exactly one service" unless services.size == 1
@@ -18,13 +20,26 @@ required.each do |key|
   abort "required secret must not define a source: #{key}" if %w[value fromService generateValue].any? { |source| item.key?(source) }
 end
 abort "billable service type present" if services.any? { |item| %w[pserv cron worker].include?(item["type"]) }
+
+runbook = File.read(File.join(repo_root, "docs/operations/render.md"))
+%w[Aiven Free 1\ GB 15\ minutes ephemeral no\ payment\ method php\ artisan\ migrate\ --force].each do |detail|
+  abort "runbook missing required deployment detail: #{detail}" unless runbook.include?(detail)
+end
+required.each do |key|
+  abort "runbook missing required secret key: #{key}" unless runbook.include?(key)
+end
+
+readme = File.read(File.join(repo_root, "README.md"))
+["Agency Hub", "24-hour demo", "Render Free", "Aiven MySQL Free"].each do |detail|
+  abort "README missing required deployment detail: #{detail}" unless readme.include?(detail)
+end
 RUBY
 )
 
 if command -v ruby >/dev/null 2>&1; then
-  ruby -ryaml -e "$ruby_check"
+  ruby -ryaml -e "$ruby_check" "$repo_root"
 elif command -v docker >/dev/null 2>&1; then
-  docker run --rm --volume "$PWD:/workspace:ro" --workdir /workspace ruby:3.4 ruby -ryaml -e "$ruby_check"
+  docker run --rm --volume "$repo_root:/workspace:ro" --workdir /workspace ruby:3.4 ruby -ryaml -e "$ruby_check" /workspace
 else
   echo "Ruby or Docker is required to validate render.yaml" >&2
   exit 127
