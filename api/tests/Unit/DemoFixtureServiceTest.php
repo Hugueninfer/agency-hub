@@ -6,7 +6,6 @@ use App\Domain\Services\DemoFixtureService;
 use App\Models\Board;
 use App\Models\Invoice;
 use App\Models\Notification;
-use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;

@@ -87,6 +87,7 @@ class DemoFixtureService
                 $profile = ['name' => $data['name'], 'email' => $local.'+'.$destination->uuid.'@'.$domain];
                 if ($key === 'alex') {
                     DB::table('users')->where('id', $owner->id)->update($profile + ['updated_at' => $now]);
+
                     continue;
                 }
                 $userRows[] = $attributes('users.'.$key) + $profile + [
